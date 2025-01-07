@@ -119,16 +119,18 @@ export class UserService {
     try {
       const hashedPassword = await this.hashedPassword(createUserDTO.password);
 
-      await this.databaseService.user.create({
+      const usr = await this.databaseService.user.create({
         data: {
           email: createUserDTO.email,
           hashedPassword: hashedPassword,
           username: createUserDTO.username,
+          profileImg: createUserDTO?.profilePicture,
           DateOfBirth: createUserDTO.dob,
           gender: createUserDTO.gender,
           roleId: 1,
         },
       });
+      return usr;
     } catch (error) {
       throw new InternalServerException(
         ErrorCodes.InternalServerErrorCode.INTERNAL_SERVER_ERROR,

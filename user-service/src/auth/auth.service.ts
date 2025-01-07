@@ -53,29 +53,26 @@ export class AuthService {
     return user;
   }
 
-  async signIn(user: User, role: string) {
-    return this.createToken(user, role, true);
+  async signIn(user: User) {
+    return this.createToken(user, true);
   }
 
   async refreshToken(user: User, role: string) {
     {
-      const access_token = await this.createToken(user, role);
+      const access_token = await this.createToken(user, false);
       return {
         email: user.email,
         ...access_token,
       };
     }
   }
-  private async createToken(
-    user: User,
-    role: string,
-    createRefreshToken = false,
-  ) {
+  private async createToken(user: User, createRefreshToken = false) {
+    const { role } = await this.userService.findUserRole(user.id);
     const payload: AuthJwtPayload = {
       sub: user.id,
       username: user.username,
       email: user.email,
-      role: role,
+      role: role.roleName,
       iat: Date.now(),
     };
     const access_token = await this.jwtService.signAsync(payload);
