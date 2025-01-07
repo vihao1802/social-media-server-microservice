@@ -1,11 +1,14 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
   Req,
   Request,
+  Res,
+  Response,
   UseGuards,
   UsePipes,
 } from '@nestjs/common';
@@ -17,6 +20,8 @@ import { UserService } from 'src/user/user.service';
 import { RefreshJwtAuthGuard } from './guards/refresh-jwt-auth/refresh-jwt-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth/jwt-auth.guard';
 import { LocalAuthGuard } from './guards/local-auth/local-auth.guard';
+import { GoogleAuthGuard } from './guards/google-auth/google-auth.guard';
+import { FacebookAuthGuard } from './guards/facebook-auth/facebook-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -29,10 +34,7 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   @Post('sign-in')
   async SignIn(@Request() req) {
-    const token = await this._authService.signIn(
-      req.user,
-      req.user.role.roleName,
-    );
+    const token = await this._authService.signIn(req.user);
     return {
       email: req.user.email,
       ...token,
@@ -59,5 +61,32 @@ export class AuthController {
       email: req.user.email,
       isValid: true,
     };
+  }
+
+  @Get('google/login')
+  @UseGuards(GoogleAuthGuard)
+  googleLogin() {}
+
+  @Get('google/callback')
+  @UseGuards(GoogleAuthGuard)
+  async googleCallback(@Request() req, @Res() res) {
+    const token = await this._authService.signIn(req.user);
+
+    res.redirect(
+      `http://localhost:3000?access_token=${token.access_token}&refresh_token=${token.refresh_token}`,
+    );
+  }
+  @Get('facebook/login')
+  @UseGuards(FacebookAuthGuard)
+  facebookLogin() {}
+
+  @Get('facebook/callback')
+  @UseGuards(FacebookAuthGuard)
+  async facebookCallback(@Request() req, @Response() res) {
+    const token = await this._authService.signIn(req.user);
+
+    res.redirect(
+      `http://localhost:3000?access_token=${token.access_token}&refresh_token=${token.refresh_token}`,
+    );
   }
 }

@@ -9,20 +9,25 @@ import { Strategy } from 'passport-local';
 
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy, 'local') {
-    constructor(private readonly authService: AuthService) {
-        super({
-            usernameField: 'email',
-        });
-    }
+  constructor(private readonly authService: AuthService) {
+    super({
+      usernameField: 'email',
+    });
+  }
 
-    // @UsePipes(new zodValidationPipe(SignInRequestSchema))
-    validate(email: string, password: string): Promise<any> {
-        const user = this.authService.verifyUser({ email, password });
-        if (!user) {
-            throw new UnauthorizedException(
-                ErrorCodes.UnauthorizedCode.USER_NOT_FOUND,
-            );
-        }
-        return user;
+  // @UsePipes(new zodValidationPipe(SignInRequestSchema))
+  validate(email: string, password: string): Promise<any> {
+    if (!email || !password || password.length <= 0) {
+      throw new UnauthorizedException(
+        ErrorCodes.BadRequestCode.INVALID_EMAIL_PASSWORD,
+      );
     }
+    const user = this.authService.verifyUser({ email, password });
+    if (!user) {
+      throw new UnauthorizedException(
+        ErrorCodes.UnauthorizedCode.USER_NOT_FOUND,
+      );
+    }
+    return user;
+  }
 }

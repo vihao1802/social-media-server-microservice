@@ -11,8 +11,10 @@ import { JwtAuthGuard } from './guards/jwt-auth/jwt-auth.guard';
 import refreshJwtConfig from './config/refresh-jwt.config';
 import { RefreshJwtStrategy } from './strategies/refresh-jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
-
 import googleOauthConfig from './config/google-oauth.config';
+import { GoogleStrategy } from './strategies/google.strategy';
+import facebookOauthConfig from './config/facebook-oauth.config';
+import { FacebookStrategy } from './strategies/facebook.strategy';
 
 @Module({
   imports: [
@@ -20,6 +22,7 @@ import googleOauthConfig from './config/google-oauth.config';
     ConfigModule.forFeature(jwtConfig),
     ConfigModule.forFeature(refreshJwtConfig),
     ConfigModule.forFeature(googleOauthConfig),
+    ConfigModule.forFeature(facebookOauthConfig),
   ],
   controllers: [AuthController],
   providers: [
@@ -28,6 +31,8 @@ import googleOauthConfig from './config/google-oauth.config';
     JwtStrategy,
     RefreshJwtStrategy,
     LocalStrategy,
+    GoogleStrategy,
+    FacebookStrategy,
   ],
   exports: [AuthService],
 })

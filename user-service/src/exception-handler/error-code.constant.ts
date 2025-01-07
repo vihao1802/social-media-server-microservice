@@ -29,6 +29,11 @@ const BadRequestCode: Record<string, IErrorCode> = {
     code: 1003,
     httpStatus: HttpStatus.BAD_REQUEST,
   },
+  INSUFFICIENT_PERMISSION: {
+    message: 'Insufficient permission',
+    code: 1004,
+    httpStatus: HttpStatus.BAD_REQUEST,
+  },
 };
 const UnauthorizedCode: Record<string, IErrorCode> = {
   UNEXPECTED_ERROR: {
