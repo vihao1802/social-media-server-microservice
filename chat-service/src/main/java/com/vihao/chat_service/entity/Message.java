@@ -32,6 +32,9 @@ public class Message {
     @Field(value = "sender_id")
     String senderId;
 
+    @Field(value = "sender_name")
+    String senderName;
+
     @Field(value = "reply_to")
     String replyTo; // message_id
 

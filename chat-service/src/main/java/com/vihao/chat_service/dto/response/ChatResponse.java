@@ -19,5 +19,5 @@ public class ChatResponse {
     Boolean isGroup;
     Instant createdAt;
     List<String> chatMemberIds;
-    Message latestMessage;
+    MessageResponse latestMessage;
 }

@@ -1,8 +1,10 @@
 package com.vihao.chat_service.service;
 
+import com.vihao.chat_service.client.UserServiceClient;
 import com.vihao.chat_service.dto.request.MessageRequest;
 import com.vihao.chat_service.dto.response.MessagePageResponse;
 import com.vihao.chat_service.dto.response.MessageResponse;
+import com.vihao.chat_service.dto.response.UserResponse;
 import com.vihao.chat_service.entity.Chat;
 import com.vihao.chat_service.entity.Message;
 import com.vihao.chat_service.exception.ResourceNotFoundException;
@@ -23,6 +25,8 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,6 +40,8 @@ public class MessageService {
     UploadFileService uploadFileService;
     SequenceGenerator sequenceGenerator;
     MongoTemplate mongoTemplate;
+    UserServiceClient userServiceClient;
+    TokenService tokenService;
 
     public MessageResponse createMessage(MessageRequest request) {
         chatRepository.findById(request.getChatId())
@@ -61,6 +67,7 @@ public class MessageService {
                 .msgContent(request.getMsgContent())
                 .msgMediaContent(fileUrl)
                 .senderId(request.getSenderId())
+                .senderName(request.getSenderName())
                 .sentAt(Instant.now())
                 .replyTo(request.getReplyTo())
                 .build();
@@ -96,9 +103,26 @@ public class MessageService {
                     .findMessagesByChatIdAndCursor(chatId, cursor, pageable);
         }
 
+        HashMap<String,UserResponse> cachedUser = new HashMap<>();
+        String currUserId = tokenService.getSubFromToken();
+
         List<MessageResponse> messageResponses = messages
                 .stream()
-                .map(messageMapper::entityToResponse)
+                .map(msg -> {
+                    MessageResponse res = messageMapper.entityToResponse(msg);
+
+                    if(!currUserId.equals(msg.getSenderId())) {
+                        if(cachedUser.get(res.getSenderId()) == null) {
+                            UserResponse user =  userServiceClient.getUserById(msg.getSenderId(),tokenService.getTokenFromHeader());
+                            cachedUser.put(user.getId(),user);
+                        }
+                        res.setSenderName(cachedUser.get(res.getSenderId()).getUsername());
+                        res.setSenderAvatar(cachedUser.get(res.getSenderId()).getProfileImg());
+                    }
+
+                    return res;
+                })
+                .sorted(Comparator.comparing(MessageResponse::getSentAt))
                 .collect(Collectors.toList());
 
         // Determine the next cursor (oldest message's `sentAt`)
@@ -108,7 +132,7 @@ public class MessageService {
     }
 
     public MessageResponse getLatestMessageByChatId(String chatId) {
-        Message message = messageRepository.findFirstByChatId(chatId);
+        Message message = messageRepository.findTopByChatIdOrderBySentAtDesc(chatId);
         return messageMapper.entityToResponse(message);
     }
 }

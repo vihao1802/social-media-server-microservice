@@ -26,5 +26,5 @@ public interface MessageRepository extends MongoRepository<Message,Long> {
     //sentAt: { $lt: ?1 }: Filters messages where the sentAt field is less than the provided cursor.
     List<Message> findMessagesByChatIdAndCursor(String chatId, Instant cursor, Pageable pageable);
 
-    Message findFirstByChatId(String chatId);
+    Message findTopByChatIdOrderBySentAtDesc(String chatId);
 }

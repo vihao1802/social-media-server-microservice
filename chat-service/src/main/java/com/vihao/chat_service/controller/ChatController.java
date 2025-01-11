@@ -2,6 +2,7 @@ package com.vihao.chat_service.controller;
 
 import com.vihao.chat_service.dto.request.ChatMemberCreationRequest;
 import com.vihao.chat_service.dto.request.ChatRequest;
+import com.vihao.chat_service.dto.response.ChatAndMemberResponse;
 import com.vihao.chat_service.dto.response.ChatMemberResponse;
 import com.vihao.chat_service.dto.response.ChatResponse;
 import com.vihao.chat_service.entity.MessageWebsocket;
@@ -43,6 +44,11 @@ public class ChatController {
     @GetMapping("/users/{user-id}")
     Page<ChatResponse> getAllByUserId(@PathVariable("user-id") String userId, Pageable pageable) {
         return chatService.getAllByUserId(userId, pageable);
+    }
+
+    @GetMapping("/{chat-id}")
+    ChatAndMemberResponse getById(@PathVariable("chat-id") String chatId) {
+        return chatService.getById(chatId);
     }
 
     @GetMapping("/{chat-id}/members")

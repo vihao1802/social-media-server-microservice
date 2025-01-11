@@ -12,9 +12,14 @@ import org.springframework.web.multipart.MultipartFile;
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class MessageRequest {
+    @NotEmpty
     String chatId;
 
+    @NotEmpty
     String senderId;
+
+    @NotEmpty
+    String senderName;
 
     String replyTo; // message_id
 

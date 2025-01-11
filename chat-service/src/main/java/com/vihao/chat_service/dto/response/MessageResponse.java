@@ -14,16 +14,12 @@ import java.time.Instant;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class MessageResponse {
     long id;
-
     String chatId;
-
     String senderId;
-
+    String senderName;
+    String senderAvatar;
     String replyTo; // message_id
-
     String msgContent;
-
     String msgMediaContent;
-
     Instant sentAt;
 }

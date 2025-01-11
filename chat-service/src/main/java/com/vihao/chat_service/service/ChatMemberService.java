@@ -1,5 +1,6 @@
 package com.vihao.chat_service.service;
 
+import com.vihao.chat_service.client.UserServiceClient;
 import com.vihao.chat_service.dto.request.ChatMemberCreationRequest;
 import com.vihao.chat_service.dto.response.ChatMemberResponse;
 import com.vihao.chat_service.entity.Chat;
@@ -30,6 +31,8 @@ public class ChatMemberService {
     ChatMemberMapper chatMemberMapper;
     ChatRepository chatRepository;
     MongoTemplate mongoTemplate;
+    UserServiceClient userServiceClient;
+    TokenService tokenService;
 
     public void addChatMemberList(String chatId, ChatMemberCreationRequest request) {
         chatRepository.findById(chatId).orElseThrow(() -> new ResourceNotFoundException("ChatId not found in addChatMemberList"));
@@ -63,7 +66,11 @@ public class ChatMemberService {
         return chatMemberRepository
                 .findByChatIdOrderByJoinedAtDesc(chatId)
                 .stream()
-                .map(chatMemberMapper::toChatMemberResponse)
+                .map(member -> {
+                    ChatMemberResponse res = chatMemberMapper.toChatMemberResponse(member);
+                    res.setUser(userServiceClient.getUserById(member.getUserId(),tokenService.getTokenFromHeader()));
+                    return res;
+                })
                 .toList();
     }
 }

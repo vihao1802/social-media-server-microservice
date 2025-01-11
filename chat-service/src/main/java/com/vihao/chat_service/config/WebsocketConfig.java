@@ -15,7 +15,7 @@ public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
         /*You can use Spring's built-in support
         for WebSocket and STOMP (Simple Text Oriented Messaging Protocol)
          to handle room-based messaging.*/
-        registry.addEndpoint("/ws").withSockJS();// WebSocket endpoint
+        registry.addEndpoint("/ws").setAllowedOrigins("*").withSockJS();// WebSocket endpoint
     }
 
     @Override

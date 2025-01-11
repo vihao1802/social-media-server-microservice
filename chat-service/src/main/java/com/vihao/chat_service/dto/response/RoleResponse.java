@@ -10,18 +10,7 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class UserResponse {
-    String id;
-    String email;
-    String bio;
-    String username;
-    String profileImg;
-    String gender;
-    String DateOfBirth;
-    Boolean isLocked;
-    Boolean isDisabled;
-    Boolean isOnline;
-    String createdAt;
-    int roleId;
-    RoleResponse role;
+public class RoleResponse {
+    int id;
+    String roleName;
 }
