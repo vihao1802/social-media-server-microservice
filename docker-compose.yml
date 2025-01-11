@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+    chat-service-db:
+      image: mongo:latest
+      container_name: "chat-service-mongodb"
+      ports:
+        - "27017:27017"
+      volumes:
+        - ./chat-service/mongo-data:/data/db
+      networks:
+        - chat-network
+
+    chat-service-storage:
+      image: quay.io/minio/minio:latest
+      container_name: "chat-service-storage"
+      ports:
+        - "9007:9000"
+        - "9008:9008"
+      environment:
+        MINIO_ROOT_USER: admin
+        MINIO_ROOT_PASSWORD: 12345678
+      command: server /data --console-address ":9008"
+      volumes:
+        - ./minio-data:/data
+      networks:
+        - chat-network
+
+    chat-service-container:
+      build:
+        context: ./chat-service
+        dockerfile: Dockerfile
+      image: chat-service:latest
+      container_name: "chat-service-container"
+      ports:
+        - "8101:8101"
+      depends_on:
+        - chat-service-db
+        - chat-service-storage
+      networks:
+        - chat-network
+      environment:
+        MONGO_HOST: chat-service-db
+        MONGO_PORT: 27017
+        MONGO_DB: chat-service-db
+        MINIO_ENDPOINT: http://minio-storage:9007
+        MINIO_ACCESS_KEY: xqIC4TYnrEF1MMsDf1qy
+        MINIO_SECRET_KEY: 0lyB0PLJMemp2JZGdbv5lsGh9rY8WaekqaYEXuSK
+        MINIO_BUCKET_NAME: global-storage
+        MINIO_BUCKET_PATH: chat-service
+        MINIO_PREVIEW_IMAGE_ENDPOINT: http://localhost:9008
+
+networks:
+  chat-network:
+    driver: bridge
