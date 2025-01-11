@@ -12,6 +12,11 @@ const BadRequestCode: Record<string, IErrorCode> = {
     code: 2004,
     httpStatus: HttpStatus.BAD_REQUEST,
   },
+  EMAIL_ALREADY_VERIFIED: {
+    message: 'Email already verified',
+    code: 2004,
+    httpStatus: HttpStatus.BAD_REQUEST,
+  },
   INVALID_EMAIL_PASSWORD: {
     message: 'Invalid email or password',
     code: 1002,
