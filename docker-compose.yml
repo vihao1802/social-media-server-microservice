@@ -6,6 +6,8 @@ services:
       container_name: "chat-service-mongodb"
       ports:
         - "27017:27017"
+      volumes:
+        - ./chat-service/mongo-data:/data/db
       networks:
         - chat-network
 
@@ -24,11 +26,12 @@ services:
       networks:
         - chat-network
 
-    chat-service:
+    chat-service-container:
       build:
         context: ./chat-service
         dockerfile: Dockerfile
-      container_name: "chat-service"
+      image: chat-service:latest
+      container_name: "chat-service-container"
       ports:
         - "8101:8101"
       depends_on:
@@ -45,6 +48,7 @@ services:
         MINIO_SECRET_KEY: 0lyB0PLJMemp2JZGdbv5lsGh9rY8WaekqaYEXuSK
         MINIO_BUCKET_NAME: global-storage
         MINIO_BUCKET_PATH: chat-service
+        MINIO_PREVIEW_IMAGE_ENDPOINT: http://localhost:9008
 
 networks:
   chat-network:
