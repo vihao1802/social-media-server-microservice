@@ -23,6 +23,7 @@ import { PaginationDto, paginationSchema } from './dto/pagination.dto';
 import { Roles } from 'src/auth/decorator/role.decorator';
 import { ROLE } from 'src/auth/enum/role.constant';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
+import { AuthService } from 'src/auth/auth.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('user')

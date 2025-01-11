@@ -12,6 +12,11 @@ const BadRequestCode: Record<string, IErrorCode> = {
     code: 2004,
     httpStatus: HttpStatus.BAD_REQUEST,
   },
+  EMAIL_ALREADY_VERIFIED: {
+    message: 'Email already verified',
+    code: 2004,
+    httpStatus: HttpStatus.BAD_REQUEST,
+  },
   INVALID_EMAIL_PASSWORD: {
     message: 'Invalid email or password',
     code: 1002,
@@ -27,6 +32,11 @@ const BadRequestCode: Record<string, IErrorCode> = {
   INVALID_REQUEST: {
     message: 'Invalid request',
     code: 1003,
+    httpStatus: HttpStatus.BAD_REQUEST,
+  },
+  INSUFFICIENT_PERMISSION: {
+    message: 'Insufficient permission',
+    code: 1004,
     httpStatus: HttpStatus.BAD_REQUEST,
   },
 };

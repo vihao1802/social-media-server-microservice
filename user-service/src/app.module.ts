@@ -12,6 +12,7 @@ import { GlobalExceptionFilter } from './exception-handler/exception-handler.fil
 import { APP_FILTER } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { RoleModule } from './role/role.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -22,10 +23,13 @@ import { RoleModule } from './role/role.module';
       isGlobal: true,
       expandVariables: true,
     }),
-    RoleModule],
+    RoleModule,
+    MailModule,
+  ],
   controllers: [AppController],
-  providers: [AppService,
+  providers: [
+    AppService,
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
   ],
 })
-export class AppModule { }
+export class AppModule {}
