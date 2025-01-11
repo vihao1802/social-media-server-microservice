@@ -15,6 +15,8 @@ import googleOauthConfig from './config/google-oauth.config';
 import { GoogleStrategy } from './strategies/google.strategy';
 import facebookOauthConfig from './config/facebook-oauth.config';
 import { FacebookStrategy } from './strategies/facebook.strategy';
+import { MailModule } from 'src/mail/mail.module';
+import { MailService } from 'src/mail/mail.service';
 
 @Module({
   imports: [
@@ -28,6 +30,7 @@ import { FacebookStrategy } from './strategies/facebook.strategy';
   providers: [
     AuthService,
     UserService,
+    MailService,
     JwtStrategy,
     RefreshJwtStrategy,
     LocalStrategy,

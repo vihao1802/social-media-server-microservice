@@ -14,6 +14,7 @@ export const UpdateUserSchema = z.object({
     })
     .optional(),
   gender: z.enum(['Male', 'Female']).optional(),
+  isEmailVerified: z.boolean().optional(),
 });
 
 export type UpdateUserDto = z.infer<typeof UpdateUserSchema>;

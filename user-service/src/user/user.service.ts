@@ -161,6 +161,19 @@ export class UserService {
       },
     });
   }
+  async verifyEmail(id: string) {
+    await this.checkExisted(id);
+
+    return await this.databaseService.user.update({
+      where: {
+        id: id,
+      },
+      data: {
+        isEmailVerified: true,
+      },
+    });
+  }
+
   async updatePassword(id: string, updatePasswordDto: UpdatePasswordDto) {
     const usr = await this.checkExisted(id);
 

@@ -8,20 +8,21 @@ datasource db {
 }
 
 model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
-  hashedPassword String
-  bio            String?  @db.VarChar(255)
-  username       String   @db.VarChar(255)
-  profileImg     String?
-  gender         String   @default("Male")
-  DateOfBirth    DateTime
-  isLocked       Boolean  @default(false)
-  isDisabled     Boolean  @default(false)
-  isOnline       Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  role           Role     @relation(fields: [roleId], references: [id])
-  roleId         Int
+  id              String   @id @default(cuid())
+  email           String   @unique
+  hashedPassword  String
+  bio             String?  @db.VarChar(255)
+  username        String   @db.VarChar(255)
+  profileImg      String?
+  gender          String   @default("Male")
+  DateOfBirth     DateTime
+  isLocked        Boolean  @default(false)
+  isEmailVerified Boolean  @default(false)
+  isDisabled      Boolean  @default(false)
+  isOnline        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  role            Role     @relation(fields: [roleId], references: [id])
+  roleId          Int
 }
 
 model Role {

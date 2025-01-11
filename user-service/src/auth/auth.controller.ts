@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Query,
   Req,
   Request,
   Res,
@@ -88,5 +89,28 @@ export class AuthController {
     res.redirect(
       `http://localhost:3000?access_token=${token.access_token}&refresh_token=${token.refresh_token}`,
     );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('send-confirm-email')
+  async sendConfirmEmail(@Request() req) {
+    if (
+      (await this._authService.sendConfirmEmail(req.user.email)) === 'success'
+    ) {
+      return {
+        status: 200,
+        message: 'Email sent successfully',
+      };
+    } else {
+      return {
+        status: 500,
+        message: 'Email sent failed',
+      };
+    }
+  }
+
+  @Get('confirm-email')
+  async verifyEmail(@Query('token') token: string) {
+    return await this._authService.confirmEmail(token);
   }
 }

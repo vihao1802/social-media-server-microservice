@@ -21,13 +21,14 @@ import refreshJwtConfig from './config/refresh-jwt.config';
 import { ConfigType } from '@nestjs/config';
 import { create } from 'domain';
 import * as bcrypt from 'bcrypt';
+import { MailService } from 'src/mail/mail.service';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly databaseService: DatabaseService,
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
     @Inject(refreshJwtConfig.KEY)
     private readonly refreshTokenConfig: ConfigType<typeof refreshJwtConfig>,
   ) {}
@@ -66,6 +67,41 @@ export class AuthService {
       };
     }
   }
+
+  async sendConfirmEmail(email: string) {
+    const usr = await this.userService.findByEmail(email);
+
+    if (!usr)
+      throw new BadRequestException(ErrorCodes.BadRequestCode.USER_NOT_FOUND);
+
+    if (usr.isEmailVerified)
+      throw new BadRequestException(
+        ErrorCodes.BadRequestCode.EMAIL_ALREADY_VERIFIED,
+      );
+
+    const { access_token } = await this.createToken(usr, false);
+
+    const subject = 'Confirm email';
+
+    const url = `${process.env.SERVER_DOMAIN}/auth/confirm-email?token=${access_token}`;
+
+    return await this.mailService.sendMail(email, subject, url, usr.username);
+  }
+
+  async confirmEmail(token: string) {
+    if (!token)
+      throw new BadRequestException(ErrorCodes.BadRequestCode.INVALID_REQUEST);
+
+    const payload: AuthJwtPayload = await this.jwtService.verifyAsync(token);
+
+    const user = await this.userService.findByEmail(payload.email);
+
+    if (!user)
+      throw new BadRequestException(ErrorCodes.BadRequestCode.USER_NOT_FOUND);
+
+    await this.userService.verifyEmail(payload.sub);
+  }
+
   private async createToken(user: User, createRefreshToken = false) {
     const { role } = await this.userService.findUserRole(user.id);
     const payload: AuthJwtPayload = {
