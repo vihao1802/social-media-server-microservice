@@ -23,6 +23,10 @@ import { JwtAuthGuard } from './guards/jwt-auth/jwt-auth.guard';
 import { LocalAuthGuard } from './guards/local-auth/local-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth/google-auth.guard';
 import { FacebookAuthGuard } from './guards/facebook-auth/facebook-auth.guard';
+import {
+  ResetPasswordDto,
+  resetPasswordSchema,
+} from './dto/request/reset-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -31,14 +35,18 @@ export class AuthController {
     private readonly _userService: UserService,
   ) {}
 
-  // @UsePipes(new zodValidationPipe(SignInRequestSchema))
   @UseGuards(LocalAuthGuard)
   @Post('sign-in')
   async SignIn(@Request() req) {
     const token = await this._authService.signIn(req.user);
     return {
-      email: req.user.email,
-      ...token,
+      status: 201,
+      data: {
+        email: req.user.email,
+        ...token,
+      },
+
+      message: 'Sign in successfully',
     };
   }
 
@@ -46,13 +54,31 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UsePipes(new zodValidationPipe(CreateUserSchema))
   async SignUp(@Body() body: CreateUserDTO) {
-    return await this._userService.createUser(body);
+    const user = await this._userService.createUser(body);
+    return {
+      status: 201,
+      data: {
+        user,
+      },
+      message: 'Sign up successfully',
+    };
   }
 
   @UseGuards(RefreshJwtAuthGuard)
   @Post('/refresh-token')
   async RefreshToken(@Request() req) {
-    return await this._authService.refreshToken(req.user, req.user.role);
+    const access_token = await this._authService.refreshToken(
+      req.user,
+      req.user.role,
+    );
+    return {
+      status: 201,
+      data: {
+        email: req.user.email,
+        ...access_token,
+      },
+      message: 'Token refreshed ',
+    };
   }
 
   @Post('/introspect')
@@ -99,7 +125,7 @@ export class AuthController {
     ) {
       return {
         status: 200,
-        message: 'Email sent successfully',
+        message: 'Email sent',
       };
     } else {
       return {
@@ -110,7 +136,43 @@ export class AuthController {
   }
 
   @Get('confirm-email')
-  async verifyEmail(@Query('token') token: string) {
-    return await this._authService.confirmEmail(token);
+  async verifyEmail(@Query('token') token: string, @Res() res) {
+    await this._authService.confirmEmail(token);
+    res.redirect(`http://localhost:3000`);
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(@Body('email') email: string) {
+    await this._authService.forgotPassword(email);
+    return {
+      status: 200,
+      message: 'OTP sent successfully to your email',
+    };
+  }
+
+  @Post('verify-otp')
+  async verifyOtp(@Body('email') email: string, @Body('otpCode') otp: string) {
+    const resetToken = await this._authService.verifyOTP(email, otp);
+    if (resetToken) {
+      return {
+        status: 200,
+        data: resetToken,
+        message: 'OTP verified successfully',
+      };
+    }
+  }
+
+  @Post('reset-password')
+  @UsePipes(new zodValidationPipe(resetPasswordSchema))
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    await this._authService.resetPassword(
+      resetPasswordDto.resetToken,
+      resetPasswordDto.newPassword,
+      resetPasswordDto.confirmPassword,
+    );
+    return {
+      status: 200,
+      message: 'Password reset successfully',
+    };
   }
 }

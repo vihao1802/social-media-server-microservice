@@ -17,6 +17,11 @@ const BadRequestCode: Record<string, IErrorCode> = {
     code: 2004,
     httpStatus: HttpStatus.BAD_REQUEST,
   },
+  EMAIL_NOT_VERIFIED: {
+    message: 'Email not verified',
+    code: 2004,
+    httpStatus: HttpStatus.BAD_REQUEST,
+  },
   INVALID_EMAIL_PASSWORD: {
     message: 'Invalid email or password',
     code: 1002,
@@ -37,6 +42,21 @@ const BadRequestCode: Record<string, IErrorCode> = {
   INSUFFICIENT_PERMISSION: {
     message: 'Insufficient permission',
     code: 1004,
+    httpStatus: HttpStatus.BAD_REQUEST,
+  },
+  INVALID_OTP: {
+    message: 'Invalid OTP',
+    code: 1005,
+    httpStatus: HttpStatus.BAD_REQUEST,
+  },
+  INVALID_TOKEN: {
+    message: 'Invalid token',
+    code: 1005,
+    httpStatus: HttpStatus.BAD_REQUEST,
+  },
+  OTP_EXPIRED: {
+    message: 'OTP expired',
+    code: 1005,
     httpStatus: HttpStatus.BAD_REQUEST,
   },
 };

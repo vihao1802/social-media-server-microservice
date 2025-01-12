@@ -11,6 +11,8 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdatePasswordDto } from './dto/update-password-user.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { RoleService } from 'src/role/role.service';
+import { UserResponse } from './types/user-response';
+import { excludeFields } from 'src/utils/helper.util';
 
 @Injectable()
 export class UserService {
@@ -24,8 +26,13 @@ export class UserService {
         skip,
         take,
         include: {
-          role: true,
+          role: {
+            select: {
+              roleName: true,
+            },
+          },
         },
+
         orderBy: [
           paginationDto.orderBy
             ? {
@@ -80,19 +87,33 @@ export class UserService {
       page: paginationDto.page || 1,
       pageSize: paginationDto.pageSize || 5,
       totalPage: Math.ceil(total / (paginationDto.pageSize || 5)),
-      data: users,
+      data: excludeFields(users, ['hashedPassword']),
     };
   }
 
-  findOne(id: string) {
-    return this.databaseService.user.findUnique({
-      where: {
-        id: id,
-      },
-      include: {
-        role: true,
-      },
-    });
+  async findOne(id: string) {
+    try {
+      const { hashedPassword, ...userWithoutPassword } =
+        await this.databaseService.user.findUnique({
+          where: {
+            id: id,
+          },
+          include: {
+            role: {
+              select: {
+                roleName: true,
+              },
+            },
+          },
+        });
+
+      return userWithoutPassword;
+    } catch (error) {
+      throw new InternalServerException(
+        ErrorCodes.InternalServerErrorCode.INTERNAL_SERVER_ERROR,
+        error.message,
+      );
+    }
   }
 
   async findByEmail(
@@ -117,20 +138,21 @@ export class UserService {
         'Email already exists',
       );
     try {
-      const hashedPassword = await this.hashedPassword(createUserDTO.password);
+      const encodedPassword = await this.hashedData(createUserDTO.password);
 
-      const usr = await this.databaseService.user.create({
-        data: {
-          email: createUserDTO.email,
-          hashedPassword: hashedPassword,
-          username: createUserDTO.username,
-          profileImg: createUserDTO?.profilePicture,
-          DateOfBirth: createUserDTO.dob,
-          gender: createUserDTO.gender,
-          roleId: 1,
-        },
-      });
-      return usr;
+      const { hashedPassword, ...userWithoutPass } =
+        await this.databaseService.user.create({
+          data: {
+            email: createUserDTO.email,
+            hashedPassword: encodedPassword,
+            username: createUserDTO.username,
+            profileImg: createUserDTO?.profilePicture,
+            DateOfBirth: createUserDTO.dob,
+            gender: createUserDTO.gender,
+            roleId: 1,
+          },
+        });
+      return userWithoutPass;
     } catch (error) {
       throw new InternalServerException(
         ErrorCodes.InternalServerErrorCode.INTERNAL_SERVER_ERROR,
@@ -175,7 +197,13 @@ export class UserService {
   }
 
   async updatePassword(id: string, updatePasswordDto: UpdatePasswordDto) {
-    const usr = await this.checkExisted(id);
+    const usr = await this.databaseService.user.findUnique({
+      where: {
+        id: id,
+      },
+    });
+    if (!usr)
+      throw new BadRequestException(ErrorCodes.BadRequestCode.USER_NOT_FOUND);
 
     const checkPassword = await bcrypt.compare(
       updatePasswordDto.oldPassword,
@@ -184,9 +212,21 @@ export class UserService {
     if (!checkPassword)
       throw new BadRequestException(ErrorCodes.BadRequestCode.INVALID_PASSWORD);
 
-    const hashedPassword = await this.hashedPassword(
-      updatePasswordDto.newPassword,
-    );
+    const hashedPassword = await this.hashedData(updatePasswordDto.newPassword);
+
+    return await this.databaseService.user.update({
+      where: {
+        id: id,
+      },
+      data: {
+        hashedPassword: hashedPassword,
+      },
+    });
+  }
+  async resetPassword(id: string, newPassword: string) {
+    await this.checkExisted(id);
+
+    const hashedPassword = await this.hashedData(newPassword);
 
     return await this.databaseService.user.update({
       where: {
@@ -225,17 +265,16 @@ export class UserService {
     });
   }
 
-  private async hashedPassword(rawPassword: string): Promise<string> {
+  async hashedData(rawString: string): Promise<string> {
     try {
-      const salt = await bcrypt.genSalt();
-
-      const hashed = await bcrypt.hash(rawPassword, salt);
+      const salt = await bcrypt.genSalt(Number(process.env.SALT_ROUNDS));
+      const hashed = await bcrypt.hash(rawString, salt);
 
       return hashed;
     } catch (error) {
       throw new InternalServerException(
         ErrorCodes.InternalServerErrorCode.INTERNAL_SERVER_ERROR,
-        'Error hashing password',
+        'Error when hashing ',
       );
     }
   }

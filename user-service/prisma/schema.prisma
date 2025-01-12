@@ -8,21 +8,30 @@ datasource db {
 }
 
 model User {
-  id              String   @id @default(cuid())
-  email           String   @unique
+  id              String    @id @default(cuid())
+  email           String    @unique
   hashedPassword  String
-  bio             String?  @db.VarChar(255)
-  username        String   @db.VarChar(255)
+  bio             String?   @db.VarChar(255)
+  username        String    @db.VarChar(255)
   profileImg      String?
-  gender          String   @default("Male")
+  gender          String    @default("Male")
   DateOfBirth     DateTime
-  isLocked        Boolean  @default(false)
-  isEmailVerified Boolean  @default(false)
-  isDisabled      Boolean  @default(false)
-  isOnline        Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  role            Role     @relation(fields: [roleId], references: [id])
+  isLocked        Boolean   @default(false)
+  isEmailVerified Boolean   @default(false)
+  isDisabled      Boolean   @default(false)
+  isOnline        Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  role            Role      @relation(fields: [roleId], references: [id])
   roleId          Int
+  UserOTP         UserOTP[]
+}
+
+model UserOTP {
+  id        Int      @id @default(autoincrement())
+  otp       String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime @default(now())
 }
 
 model Role {
