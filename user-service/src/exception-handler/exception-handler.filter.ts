@@ -1,4 +1,11 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { BadRequestException } from './bad-request.exception';
 import { HttpAdapterHost } from '@nestjs/core';
 import { UnauthorizedException } from './unauthorized.exception';
@@ -6,7 +13,7 @@ import { InternalServerException } from './internal-server.exception';
 import { ZodError } from 'zod';
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  constructor(private readonly httpAdapterHost: HttpAdapterHost) { }
+  constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
   catch(exception: unknown, host: ArgumentsHost) {
     console.log(exception);
 
@@ -22,13 +29,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const responseBody = exception.generateHttpResponseBody();
       // Retrieves the HTTP status code from the `BadRequestException`.
       if (process.env.NODE_ENV === 'development')
-        Logger.error(exception.message, exception.stack, 'GlobalExceptionFilter');
-      else
-        Logger.error(exception.message, 'GlobalExceptionFilter');
+        Logger.error(
+          exception.message,
+          exception.stack,
+          'GlobalExceptionFilter',
+        );
+      else Logger.error(exception.message, 'GlobalExceptionFilter');
       httpAdapter.reply(ctx.getResponse(), responseBody, httpStatus);
-    }
-
-    if (exception instanceof UnauthorizedException) {
+    } else if (exception instanceof UnauthorizedException) {
       const httpStatus = exception.getStatus();
 
       const request = ctx.getRequest();
@@ -37,14 +45,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const responseBody = exception.generateHttpResponseBody();
       // Retrieves the HTTP status code from the `BadRequestException`.
       if (process.env.NODE_ENV === 'development')
-        Logger.error(exception.message, exception.stack, 'GlobalExceptionFilter');
-      else
-        Logger.error(exception.message, 'GlobalExceptionFilter');
+        Logger.error(
+          exception.message,
+          exception.stack,
+          'GlobalExceptionFilter',
+        );
+      else Logger.error(exception.message, 'GlobalExceptionFilter');
       httpAdapter.reply(ctx.getResponse(), responseBody, httpStatus);
       return;
-    }
-
-    if (exception instanceof InternalServerException) {
+    } else if (exception instanceof InternalServerException) {
       const httpStatus = exception.getStatus();
 
       const request = ctx.getRequest();
@@ -53,15 +62,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const responseBody = exception.generateHttpResponseBody();
       // Retrieves the HTTP status code from the `BadRequestException`.
       if (process.env.NODE_ENV === 'development')
-        Logger.error(exception.message, exception.stack, 'GlobalExceptionFilter');
-      else
-        Logger.error(exception.message, 'GlobalExceptionFilter');
+        Logger.error(
+          exception.message,
+          exception.stack,
+          'GlobalExceptionFilter',
+        );
+      else Logger.error(exception.message, 'GlobalExceptionFilter');
       httpAdapter.reply(ctx.getResponse(), responseBody, httpStatus);
       return;
-    }
-
-    if (exception instanceof ZodError) {
-
+    } else if (exception instanceof ZodError) {
       const ctx = host.switchToHttp();
       const response = ctx.getResponse();
 
@@ -77,15 +86,18 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         errors,
       });
       return;
+    } else {
+      const response = ctx.getResponse();
+
+      // Chuyển đổi lỗi Zod thành BadRequestException
+
+      response.status(500).json({
+        statusCode: 500,
+        message:
+          exception instanceof Error
+            ? exception.message
+            : 'Internal server error',
+      });
     }
-    const response = ctx.getResponse();
-
-    // Chuyển đổi lỗi Zod thành BadRequestException
-
-    response.status(500).json({
-      statusCode: 500,
-      message: exception instanceof Error ? exception.message : 'Internal server error',
-    });
   }
-
 }

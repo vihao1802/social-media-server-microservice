@@ -16,16 +16,17 @@ import { InternalServerException } from 'src/exception-handler/internal-server.e
 import { Prisma, User } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { AuthJwtPayload } from './types/jwt-payload';
-import { Formater } from 'src/utils/format.util';
 import refreshJwtConfig from './config/refresh-jwt.config';
 import { ConfigType } from '@nestjs/config';
 import { create } from 'domain';
 import * as bcrypt from 'bcrypt';
 import { MailService } from 'src/mail/mail.service';
+import { generateRandomNumber } from 'src/utils/generator.util';
 
 @Injectable()
 export class AuthService {
   constructor(
+    private readonly databaseService: DatabaseService,
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
@@ -85,7 +86,12 @@ export class AuthService {
 
     const url = `${process.env.SERVER_DOMAIN}/auth/confirm-email?token=${access_token}`;
 
-    return await this.mailService.sendMail(email, subject, url, usr.username);
+    return await this.mailService.sendVerifyEmailMail(
+      email,
+      subject,
+      url,
+      usr.username,
+    );
   }
 
   async confirmEmail(token: string) {
@@ -100,6 +106,105 @@ export class AuthService {
       throw new BadRequestException(ErrorCodes.BadRequestCode.USER_NOT_FOUND);
 
     await this.userService.verifyEmail(payload.sub);
+  }
+
+  async forgotPassword(email: string) {
+    const usr = await this.userService.findByEmail(email);
+
+    if (!usr)
+      throw new BadRequestException(ErrorCodes.BadRequestCode.USER_NOT_FOUND);
+
+    if (!usr.isEmailVerified)
+      throw new BadRequestException(
+        ErrorCodes.BadRequestCode.EMAIL_NOT_VERIFIED,
+      );
+
+    try {
+      const opt_code = generateRandomNumber().toString();
+
+      await this.mailService.sendOTP(
+        email,
+        'Forgot password',
+        opt_code,
+        usr.username,
+      );
+
+      const opt_code_encrypted = await this.userService.hashedData(opt_code);
+
+      await this.databaseService.userOTP.create({
+        data: {
+          otp: opt_code_encrypted,
+          userId: usr.id,
+        },
+      });
+    } catch (error: any) {
+      console.error(error);
+      throw new InternalServerErrorException(
+        ErrorCodes.InternalServerErrorCode.EMAIL_SEND_FAILED,
+      );
+    }
+  }
+
+  async verifyOTP(email: string, otp: string) {
+    const otpData = await this.databaseService.userOTP.findFirst({
+      where: {
+        user: {
+          email,
+        },
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    if (!otpData)
+      throw new BadRequestException(ErrorCodes.BadRequestCode.INVALID_OTP);
+
+    if (
+      otpData.createdAt.getTime() + parseInt(process.env.OTP_EXPIRES_IN) <
+      Date.now()
+    )
+      throw new BadRequestException(ErrorCodes.BadRequestCode.OTP_EXPIRED);
+
+    const isValid = await bcrypt.compare(otp, otpData.otp);
+
+    if (!isValid)
+      throw new BadRequestException(ErrorCodes.BadRequestCode.INVALID_OTP);
+
+    const resetToken = await this.createToken(otpData.user, false);
+
+    await this.databaseService.userOTP.delete({
+      where: {
+        id: otpData.id,
+      },
+    });
+
+    return {
+      ...resetToken,
+    };
+  }
+
+  async resetPassword(
+    resetToken: string,
+    newPassword: string,
+    confirmPassword: string,
+  ) {
+    if (newPassword !== confirmPassword)
+      throw new BadRequestException(ErrorCodes.BadRequestCode.INVALID_REQUEST);
+
+    const payload: AuthJwtPayload =
+      await this.jwtService.verifyAsync(resetToken);
+
+    if (!payload)
+      throw new BadRequestException(ErrorCodes.BadRequestCode.INVALID_TOKEN);
+
+    try {
+      return await this.userService.resetPassword(payload.sub, newPassword);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        ErrorCodes.InternalServerErrorCode.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   private async createToken(user: User, createRefreshToken = false) {
