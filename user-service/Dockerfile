@@ -9,7 +9,7 @@ FROM node:20.16-alpine AS builder
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package*.json /app/
 
 
 # Install dependencies
@@ -17,10 +17,10 @@ RUN npm install --omit=dev
 
 
 # Copy the rest of the application code
-COPY . .
+COPY ./ /app
 
 # Generate Prisma Client
-RUN npm run prisma:gen
+RUN npx prisma generate
 
 # Build the application
 RUN npm run build
@@ -30,6 +30,9 @@ FROM node:20.16-alpine
 
 # Set working directory
 WORKDIR /app
+
+# Copy dependencies from the build stage
+COPY --from=builder /app/package.json ./package.json
 
 # Copy dependencies from the build stage
 COPY --from=builder /app/node_modules ./node_modules
