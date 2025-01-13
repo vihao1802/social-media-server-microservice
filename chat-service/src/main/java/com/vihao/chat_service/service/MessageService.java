@@ -4,6 +4,7 @@ import com.vihao.chat_service.client.UserServiceClient;
 import com.vihao.chat_service.dto.request.MessageRequest;
 import com.vihao.chat_service.dto.response.MessagePageResponse;
 import com.vihao.chat_service.dto.response.MessageResponse;
+import com.vihao.chat_service.dto.response.MessageWebsocketResponse;
 import com.vihao.chat_service.dto.response.UserResponse;
 import com.vihao.chat_service.entity.Chat;
 import com.vihao.chat_service.entity.Message;
@@ -22,6 +23,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -42,6 +44,7 @@ public class MessageService {
     MongoTemplate mongoTemplate;
     UserServiceClient userServiceClient;
     TokenService tokenService;
+    SimpMessagingTemplate simpMessagingTemplate;
 
     public MessageResponse createMessage(MessageRequest request) {
         chatRepository.findById(request.getChatId())
@@ -51,7 +54,7 @@ public class MessageService {
         long messageId = sequenceGenerator
                 .generateSequenceValue("message_id"); // message_id is the _id field value in document of Counter collection
 
-        System.out.println("messageId: " + messageId);
+        System.out.println("[createMessage] messageId: " + messageId);
 
         if(request.getMsgMediaContent() != null && !request.getMsgMediaContent().isEmpty()) {
             // if user send message via image
@@ -73,7 +76,12 @@ public class MessageService {
                 .build();
 
         messageRepository.save(msg);
+
+//        messagingTemplate.convertAndSend("/topic/chat/" + request.getChatId(),messageMapper.entityToResponse(msg));
+        simpMessagingTemplate.convertAndSend("/topic/chat/" + request.getChatId(),messageMapper.entityToResponse(msg));
+
         addLatestMessageToChat(msg.getChatId(),msg);
+
         return messageMapper.entityToResponse(msg);
     }
 

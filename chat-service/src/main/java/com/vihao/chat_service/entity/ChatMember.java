@@ -22,7 +22,6 @@ import java.util.UUID;
 @Document(collection = "chat_members")
 public class ChatMember {
     @MongoId
-    @Builder.Default
     String id = UUID.randomUUID().toString();
 
     @Field(value = "chat_id")
