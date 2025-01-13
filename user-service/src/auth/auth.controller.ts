@@ -118,6 +118,17 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async getCurrentUser(@Request() req) {
+    const usr = await this._userService.findOne(req.user.sub);
+    return {
+      status: 200,
+      data: {
+        ...usr,
+      },
+    };
+  }
+  @UseGuards(JwtAuthGuard)
   @Post('send-confirm-email')
   async sendConfirmEmail(@Request() req) {
     if (

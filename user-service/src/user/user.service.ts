@@ -106,9 +106,9 @@ export class UserService {
             },
           },
         });
-
       return userWithoutPassword;
     } catch (error) {
+      console.error(error);
       throw new InternalServerException(
         ErrorCodes.InternalServerErrorCode.INTERNAL_SERVER_ERROR,
         error.message,
