@@ -71,4 +71,4 @@ secrets.yml
 .git-hooks/
 node_modules
 
- minio-data
+minio-data/
