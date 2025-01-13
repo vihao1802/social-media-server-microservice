@@ -15,12 +15,14 @@ public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
         /*You can use Spring's built-in support
         for WebSocket and STOMP (Simple Text Oriented Messaging Protocol)
          to handle room-based messaging.*/
-        registry.addEndpoint("/ws").setAllowedOrigins("*").withSockJS();// WebSocket endpoint
+        registry.addEndpoint("/ws")
+                .setAllowedOrigins("http://localhost:3000")
+                .withSockJS();// WebSocket endpoint
     }
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-//        registry.setApplicationDestinationPrefixes("/app");
+        registry.setApplicationDestinationPrefixes("/app");
         registry.enableSimpleBroker("/topic");
     }
 }

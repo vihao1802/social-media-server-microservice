@@ -1,6 +1,20 @@
 version: "3.8"
 
 services:
+    api-gateway:
+      build:
+        context: ./api-gateway
+        dockerfile: Dockerfile
+      image: api-gateway:latest
+      container_name: "api-gateway"
+      ports:
+        - "8080:8080"
+      environment:
+        CHAT_SERVICE_URL: http://chat-service-container:8101
+        USER_SERVICE_URL: http://localhost:8103
+      networks:
+        - chat-network
+
     chat-service-db:
       image: mongo:latest
       container_name: "chat-service-mongodb"
@@ -11,9 +25,9 @@ services:
       networks:
         - chat-network
 
-    chat-service-storage:
+    minio-storage:
       image: quay.io/minio/minio:latest
-      container_name: "chat-service-storage"
+      container_name: "minio-storage"
       ports:
         - "9007:9000"
         - "9008:9008"
@@ -36,19 +50,20 @@ services:
         - "8101:8101"
       depends_on:
         - chat-service-db
-        - chat-service-storage
+        - minio-storage
       networks:
         - chat-network
       environment:
         MONGO_HOST: chat-service-db
         MONGO_PORT: 27017
         MONGO_DB: chat-service-db
-        MINIO_ENDPOINT: http://minio-storage:9007
-        MINIO_ACCESS_KEY: xqIC4TYnrEF1MMsDf1qy
-        MINIO_SECRET_KEY: 0lyB0PLJMemp2JZGdbv5lsGh9rY8WaekqaYEXuSK
+        MINIO_URL: http://minio-storage:9000
+        MINIO_ACCESS_KEY: eV0XqzJcSs2zNrVPN3Go
+        MINIO_SECRET_KEY: b4CBjHEGbvBkXzU7nmWeKcQAFaI1w6oYaZRl6AQr
         MINIO_BUCKET_NAME: global-storage
         MINIO_BUCKET_PATH: chat-service
         MINIO_PREVIEW_IMAGE_ENDPOINT: http://localhost:9008
+        API_GATEWAY_URL: http://localhost:8103
 
 networks:
   chat-network:

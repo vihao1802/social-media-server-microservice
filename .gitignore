@@ -35,8 +35,6 @@
 *.zip
 *.tar.gz
 *.rar
-
-.#*
 .*.md.html
 .DS_Store
 .attach_pid*
@@ -72,3 +70,5 @@ secrets.yml
 .sts4-cache
 .git-hooks/
 node_modules
+
+ minio-data

@@ -8,22 +8,22 @@ spring:
     gateway:
       routes:
         - id: chat-service-chats
-          uri: http://localhost:8101
+          uri: ${CHAT_SERVICE_URL}
           predicates:
             - Path=/chats/**
 
         - id: chat-service-messages
-          uri: http://localhost:8101
+          uri: ${CHAT_SERVICE_URL}
           predicates:
             - Path=/messages/**
 
         - id: chat-service-chat-members
-          uri: http://localhost:8101
+          uri: ${CHAT_SERVICE_URL}
           predicates:
             - Path=/chat-members/**
 
         - id: user-service
-          uri: http://localhost:8103
+          uri: ${USER_SERVICE_URL}
           predicates:
-            - Path=/users/**
+            - Path=/user/**
 
