@@ -27,3 +27,7 @@ spring:
           predicates:
             - Path=/user/**
 
+        - id: user-service-auth
+          uri: ${USER_SERVICE_URL}
+          predicates:
+            - Path=/auth/**
