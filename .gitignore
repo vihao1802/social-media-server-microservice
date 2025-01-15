@@ -72,3 +72,5 @@ secrets.yml
 node_modules
 
 minio-data/
+
+.env.global

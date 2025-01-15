@@ -6,24 +6,21 @@ spring:
     name: api-gateway
   cloud:
     gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "http://localhost:3000"
+            allowedMethods: "*"
+            allowed-headers: "*"
+            allow-credentials: true
+
       routes:
-        - id: chat-service-chats
+        - id: chat-service
           uri: ${CHAT_SERVICE_URL}
           predicates:
-            - Path=/chats/**
-
-        - id: chat-service-messages
-          uri: ${CHAT_SERVICE_URL}
-          predicates:
-            - Path=/messages/**
-
-        - id: chat-service-chat-members
-          uri: ${CHAT_SERVICE_URL}
-          predicates:
-            - Path=/chat-members/**
+            - Path=/chats/**,/messages/**,/chat-members/**
 
         - id: user-service
           uri: ${USER_SERVICE_URL}
           predicates:
-            - Path=/user/**
-
+            - Path=/user/**,/auth/**
