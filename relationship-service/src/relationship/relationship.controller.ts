@@ -107,8 +107,14 @@ export class RelationshipController {
   async UnBlockUser(@Query('userId') userId: string, @Request() req) {
     return await this.relationshipService.UnblockerUser(req.user.id, userId);
   }
-  @Get('me/recommendation')
-  async GetRecommendation() {
-    // return await this.relationshipService.GetRecommendation();
-  }
+  // @Get('me/recommendation')
+  // async GetRecommendation(
+  //   @Request() req,
+  //   @Query() paginationDto: PaginationDto,
+  // ) {
+  //   return await this.relationshipService.GetRecommendation(
+  //     req.user.id,
+  //     paginationDto,
+  //   );
+  // }
 }

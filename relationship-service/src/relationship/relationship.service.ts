@@ -338,6 +338,55 @@ export class RelationshipService {
       throw new BadRequestException(error.message);
     }
   }
+  // async GetRecommendation(userId: string, paginationDto: PaginationDto) {
+  //   await this.CheckUserExist(userId);
+
+  //   const excludeIDs = await this.databaseClient.relationship.findMany({
+  //     where: {
+  //       OR: [
+  //         {
+  //           SenderId: userId,
+  //         },
+  //         {
+  //           ReceiverId: userId,
+  //         },
+  //       ],
+  //       Type: RelationshipType.FOLLOW,
+  //     },
+  //     select: {
+  //       ReceiverId: true,
+  //       SenderId: true,
+  //     },
+  //   });
+
+  //   // Loại bỏ giá trị bằng với userId và đổi tên trường
+  //   const uniqueIds = excludeIDs.map((item) => {
+  //     const filteredEntry = Object.entries(item)
+  //       .filter(([key, value]) => value !== userId) // Loại bỏ giá trị bằng userId
+  //       .map(([key, value]) => ['id', value]); // Đổi tên trường thành selectedId
+
+  //     return Object.fromEntries(filteredEntry); // Chuyển về đối tượng
+  //   });
+
+  //   const rcm = await this.databaseClient.relationship.findMany({
+  //     where: {
+  //       OR: [
+  //         {
+  //           ReceiverId: {
+  //             notIn: uniqueIds.map((item) => item.id),
+  //           },
+  //         },
+  //         {
+  //           SenderId: {
+  //             notIn: uniqueIds.map((item) => item.id),
+  //           },
+  //         },
+  //       ],
+  //       Type: RelationshipType.FOLLOW,
+  //     },
+  //     groupBy: ['ReceiverId', 'SenderId'],
+  //   });
+  // }
 
   private async CheckUserExist(userId: string) {
     try {
