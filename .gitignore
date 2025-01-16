@@ -74,3 +74,12 @@ node_modules
 minio-data/
 
 .env.global
+
+**/.env
+**/venv
+**/__pycache__/
+*.pyc
+*.pyo
+
+/post-service/.env
+/comment-service/.env

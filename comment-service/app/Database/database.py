@@ -7,6 +7,5 @@ DB_NAME = config("DATABASE_NAME")
 client = AsyncIOMotorClient(MONGO_URI)
 db = client[DB_NAME]
 
-post_collection = db["posts"]
-postMedia_collection = db["post_media"]
-postViewer_collection = db["post_viewers"]
+comments_collection = db["comments"]
+comment_reaction_collection = db["comment_reactions"]
