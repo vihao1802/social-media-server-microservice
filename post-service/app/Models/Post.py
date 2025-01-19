@@ -18,6 +18,15 @@ class Post(BaseModel):
     creatorId: str
     isDelete: bool
 
+class PostRequest(Post):
+    pass
 
 class PostResponse(Post):
     id: str
+
+    @staticmethod
+    def from_mongo(documents):
+        for document in documents:
+            document["id"] = str(document["_id"])
+            document.pop("_id")
+        return [PostResponse(**document) for document in documents]

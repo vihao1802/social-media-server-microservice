@@ -8,8 +8,11 @@ postMedia_router = APIRouter(prefix="/post_media", tags=["PostMedia"])
 
 @postMedia_router.get("/{post_id}", status_code=status.HTTP_200_OK)
 async def get(post_id: str):
-    media = postMedia_collection.find({"postId": post_id})
-    return media
+    try:
+        media = await postMedia_collection.find({"postId": post_id})
+        return [PostMediaResponse(**m, id=str(m["_id"])) for m in media]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
 
 @postMedia_router.post("/", status_code=status.HTTP_201_CREATED, response_model=PostMediaResponse)
 async def create(
@@ -27,7 +30,7 @@ async def create(
             "postId": post_id,
             "mediaUrl": media_url
         }
-        result = postMedia_collection.insert_one(new_post_media)
+        result = await postMedia_collection.insert_one(new_post_media)
         return PostMediaResponse(**new_post_media, id=str(result.inserted_id))
     except InvalidResponseError as e:
         raise HTTPException(status_code=500 ,detail=f"MinIO error: {str(e)}")
