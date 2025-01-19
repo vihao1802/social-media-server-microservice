@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -20,16 +21,21 @@ export class RelationshipService {
     private readonly databaseClient: DatabaseCLient,
     private readonly httpService: HttpService,
   ) {}
-  async GetUserFollowingList(userId: string, paginationDto: PaginationDto) {
-    await this.CheckUserExist(userId);
+  async GetUserFollowingList(
+    authorizedUser: User,
+    paginationDto: PaginationDto,
+    userId?: string,
+  ) {
+    if (userId) await this.CheckUserExist(userId, authorizedUser.Token);
     if (
-      paginationDto.orderBy !== '' ||
+      paginationDto.orderBy &&
       !(paginationDto.orderBy in Prisma.RelationshipScalarFieldEnum)
     ) {
       throw new BadRequestException(
         `${paginationDto.orderBy} is not a valid field`,
       );
     }
+
     const skip = (paginationDto.page - 1) * paginationDto.pageSize || 0;
     const take = paginationDto.pageSize || 5;
     try {
@@ -42,7 +48,7 @@ export class RelationshipService {
             Type: true,
           },
           where: {
-            SenderId: userId,
+            SenderId: userId ? userId : authorizedUser.id,
             Status: RelationshipStatus.ACCEPTED,
           },
 
@@ -62,7 +68,7 @@ export class RelationshipService {
         }),
         this.databaseClient.relationship.count({
           where: {
-            ReceiverId: userId,
+            SenderId: userId ? userId : authorizedUser.id,
           },
         }),
       ]);
@@ -79,10 +85,14 @@ export class RelationshipService {
     }
   }
 
-  async GetUserFollowerList(userId: string, paginationDto: PaginationDto) {
-    await this.CheckUserExist(userId);
+  async GetUserFollowerList(
+    authorizedUser: User,
+    paginationDto: PaginationDto,
+    userId?: string,
+  ) {
+    if (userId) await this.CheckUserExist(userId, authorizedUser.Token);
     if (
-      paginationDto.orderBy !== '' ||
+      paginationDto.orderBy &&
       !(paginationDto.orderBy in Prisma.RelationshipScalarFieldEnum)
     ) {
       throw new BadRequestException(
@@ -138,11 +148,14 @@ export class RelationshipService {
     }
   }
 
-  async FollowUser(senderId: string, receiverId: string) {
-    const user: any = await this.CheckUserExist(receiverId);
+  async FollowUser(authorizedUser: User, receiverId: string) {
+    const user: any = await this.CheckUserExist(
+      receiverId,
+      authorizedUser.Token,
+    );
     try {
       const relationship: Relationship = await this.GetRelationship(
-        senderId,
+        authorizedUser.id,
         receiverId,
       );
 
@@ -157,36 +170,47 @@ export class RelationshipService {
           throw new Error('You are blocked');
         }
       }
+      // check if receiver followed sender or not
       const relationship_receiver: Relationship = await this.GetRelationship(
         receiverId,
-        senderId,
+        authorizedUser.id,
       );
+
       const approval =
-        relationship_receiver.Type === RelationshipType.FOLLOW &&
-        relationship_receiver.Status === 'accepted' &&
+        (relationship_receiver &&
+          relationship_receiver.Type === RelationshipType.FOLLOW &&
+          relationship_receiver.Status === 'accepted') ||
         !user.isPrivateAccount;
+      console.log({
+        ReceiverId: receiverId,
+        Status: approval
+          ? RelationshipStatus.ACCEPTED
+          : RelationshipStatus.PENDING,
+        Type: RelationshipType.FOLLOW,
+        SenderId: authorizedUser.id,
+      });
 
       await this.databaseClient.relationship.create({
         data: {
-          SenderId: senderId,
           ReceiverId: receiverId,
           Status: approval
             ? RelationshipStatus.ACCEPTED
             : RelationshipStatus.PENDING,
           Type: RelationshipType.FOLLOW,
+          SenderId: authorizedUser.id,
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(error.message);
-      throw new BadRequestException(error.message);
+      throw new HttpException(error.message, error.status);
     }
   }
 
-  async UnFollowUser(senderId: string, receiverId: string) {
-    const user: any = await this.CheckUserExist(receiverId);
+  async UnFollowUser(authorizedUser: User, receiverId: string) {
+    await this.CheckUserExist(receiverId, authorizedUser.Token);
     try {
       const relationship: Relationship = await this.GetRelationship(
-        senderId,
+        authorizedUser.id,
         receiverId,
       );
 
@@ -206,12 +230,12 @@ export class RelationshipService {
       throw new BadRequestException(error.message);
     }
   }
-  async AcceptUserFollowRequest(senderId: string, receiverId: string) {
-    const user: any = await this.CheckUserExist(senderId);
+  async AcceptUserFollowRequest(senderId: string, authorizedUser: User) {
+    const user: any = await this.CheckUserExist(senderId, authorizedUser.Token);
     try {
       const relationship: Relationship = await this.GetRelationship(
         senderId,
-        receiverId,
+        authorizedUser.id,
       );
 
       if (relationship) {
@@ -233,12 +257,12 @@ export class RelationshipService {
       throw new BadRequestException(error.message);
     }
   }
-  async RejectUserFollowRequest(senderId: string, receiverId: string) {
-    await this.CheckUserExist(senderId);
+  async RejectUserFollowRequest(senderId: string, authorizedUser: User) {
+    await this.CheckUserExist(senderId, authorizedUser.Token);
     try {
       const relationship: Relationship = await this.GetRelationship(
         senderId,
-        receiverId,
+        authorizedUser.id,
       );
       if (!relationship) return;
 
@@ -269,24 +293,45 @@ export class RelationshipService {
       throw new InternalServerErrorException('Internal Server Error');
     }
   }
-  async GetMyBlockList(userId: string) {
-    await this.CheckUserExist(userId);
+  async GetMyBlockList(authorizedUser: User, paginationDto: PaginationDto) {
+    const skip = (paginationDto.page - 1) * paginationDto.pageSize || 0;
+    const take = paginationDto.pageSize || 5;
     try {
-      return await this.databaseClient.relationship.findMany({
-        where: {
-          SenderId: userId,
-          Type: RelationshipType.BLOCK,
-        },
-      });
+      const [blockList, total] = await Promise.all([
+        this.databaseClient.relationship.findMany({
+          skip,
+          take,
+          where: {
+            SenderId: authorizedUser.id,
+            Type: RelationshipType.BLOCK,
+          },
+        }),
+        this.databaseClient.relationship.count({
+          where: {
+            SenderId: authorizedUser.id,
+            Type: RelationshipType.BLOCK,
+          },
+        }),
+      ]);
+
+      return {
+        total,
+        page: paginationDto.page || 1,
+        pageSize: paginationDto.pageSize || 5,
+        totalPage: Math.ceil(total / (paginationDto.pageSize || 5)),
+        data: blockList,
+      };
     } catch (error) {
       this.logger.error(error.message);
       throw new InternalServerErrorException('Internal Server Error');
     }
   }
-  async BlockUser(senderId: string, receiverId: string) {
+  async BlockUser(authorizedUser: User, receiverId: string) {
+    if (receiverId === authorizedUser.id)
+      throw new BadRequestException('You cannot block yourself');
     try {
       const relationship: Relationship = await this.GetRelationship(
-        senderId,
+        authorizedUser.id,
         receiverId,
       );
       if (relationship) {
@@ -306,7 +351,7 @@ export class RelationshipService {
       }
       await this.databaseClient.relationship.create({
         data: {
-          SenderId: senderId,
+          SenderId: authorizedUser.id,
           ReceiverId: receiverId,
           Type: RelationshipType.BLOCK,
           Status: RelationshipStatus.ACCEPTED,
@@ -318,10 +363,12 @@ export class RelationshipService {
     }
   }
 
-  async UnblockerUser(senderId: string, receiverId: string) {
+  async UnblockerUser(authorizedUser: User, receiverId: string) {
+    if (receiverId === authorizedUser.id)
+      throw new BadRequestException('You cannot unblock yourself');
     try {
       const relationship: Relationship = await this.GetRelationship(
-        senderId,
+        authorizedUser.id,
         receiverId,
       );
       if (relationship) {
@@ -338,67 +385,121 @@ export class RelationshipService {
       throw new BadRequestException(error.message);
     }
   }
-  // async GetRecommendation(userId: string, paginationDto: PaginationDto) {
-  //   await this.CheckUserExist(userId);
+  async GetRecommendation(userId: string, paginationDto: PaginationDto) {
+    const skip = (paginationDto.page - 1) * paginationDto.pageSize || 0;
+    const take = paginationDto.pageSize || 5;
 
-  //   const excludeIDs = await this.databaseClient.relationship.findMany({
-  //     where: {
-  //       OR: [
-  //         {
-  //           SenderId: userId,
-  //         },
-  //         {
-  //           ReceiverId: userId,
-  //         },
-  //       ],
-  //       Type: RelationshipType.FOLLOW,
-  //     },
-  //     select: {
-  //       ReceiverId: true,
-  //       SenderId: true,
-  //     },
-  //   });
+    // 1. Lấy danh sách bạn bè (người dùng mà userId đang follow)
+    const friends = await this.databaseClient.relationship.findMany({
+      where: {
+        SenderId: userId,
+        Type: RelationshipType.FOLLOW,
+      },
+      select: {
+        ReceiverId: true, // Chỉ lấy ReceiverId
+      },
+    });
 
-  //   // Loại bỏ giá trị bằng với userId và đổi tên trường
-  //   const uniqueIds = excludeIDs.map((item) => {
-  //     const filteredEntry = Object.entries(item)
-  //       .filter(([key, value]) => value !== userId) // Loại bỏ giá trị bằng userId
-  //       .map(([key, value]) => ['id', value]); // Đổi tên trường thành selectedId
+    const friendIds = friends.map((friend) => friend.ReceiverId);
 
-  //     return Object.fromEntries(filteredEntry); // Chuyển về đối tượng
-  //   });
+    // 2. Lấy danh sách bạn bè của bạn bè (followers của friendIds)
+    const [mutuals, total] = await Promise.all([
+      this.databaseClient.relationship.groupBy({
+        skip,
+        take,
+        by: ['ReceiverId'],
+        where: {
+          SenderId: { in: friendIds }, // SenderId là bạn bè của userId
+          ReceiverId: { not: userId }, // Loại bỏ userId khỏi danh sách đề xuất
+          Type: RelationshipType.FOLLOW,
+        },
+        _count: {
+          ReceiverId: true, // Đếm số lần xuất hiện của ReceiverId
+        },
+        orderBy: {
+          _count: {
+            ReceiverId: 'desc', // Sắp xếp theo số lượng follow chung giảm dần
+          },
+        },
+      }),
+      this.databaseClient.relationship.groupBy({
+        by: ['ReceiverId'],
+        where: {
+          SenderId: { in: friendIds }, // SenderId là bạn bè của userId
+          ReceiverId: { not: userId }, // Loại bỏ userId khỏi danh sách đề xuất
+          Type: RelationshipType.FOLLOW,
+        },
+        _count: {
+          ReceiverId: true, // Đếm số lần xuất hiện của ReceiverId
+        },
+        orderBy: {
+          _count: {
+            ReceiverId: 'desc', // Sắp xếp theo số lượng follow chung giảm dần
+          },
+        },
+      }),
+    ]);
 
-  //   const rcm = await this.databaseClient.relationship.findMany({
-  //     where: {
-  //       OR: [
-  //         {
-  //           ReceiverId: {
-  //             notIn: uniqueIds.map((item) => item.id),
-  //           },
-  //         },
-  //         {
-  //           SenderId: {
-  //             notIn: uniqueIds.map((item) => item.id),
-  //           },
-  //         },
-  //       ],
-  //       Type: RelationshipType.FOLLOW,
-  //     },
-  //     groupBy: ['ReceiverId', 'SenderId'],
-  //   });
-  // }
+    if (total.length === 0) {
+      const [mutails, total] = await this.databaseClient.relationship.groupBy({
+        by: ['SenderId'],
+        where: {
+          SenderId: { not: userId },
+          ReceiverId: { not: userId },
+          Type: RelationshipType.FOLLOW,
+        },
+        _count: {
+          SenderId: true,
+        },
+        orderBy: {
+          _count: {
+            SenderId: 'desc',
+          },
+        },
+      });
+      const alreadyFollowedIds = new Set(friends.map((r) => r.ReceiverId));
 
-  private async CheckUserExist(userId: string) {
+      // 4. Trả về danh sách người dùng đề xuất
+      const suggestions = mutuals
+        .filter((mutual) => !alreadyFollowedIds.has(mutual.ReceiverId)) // Loại bỏ những người đã follow
+        .map((mutual) => ({
+          userId: mutual.ReceiverId,
+          mutualCount: mutual._count.ReceiverId, // Số lượng follow chung
+        }));
+
+      return suggestions;
+    } else {
+      const alreadyFollowedIds = new Set(friends.map((r) => r.ReceiverId));
+
+      // 4. Trả về danh sách người dùng đề xuất
+      const suggestions = mutuals
+        .filter((mutual) => !alreadyFollowedIds.has(mutual.ReceiverId)) // Loại bỏ những người đã follow
+        .map((mutual) => ({
+          userId: mutual.ReceiverId,
+          mutualCount: mutual._count.ReceiverId, // Số lượng follow chung
+        }));
+
+      return suggestions;
+    }
+  }
+
+  private async CheckUserExist(userId: string, bearerToken: string) {
     try {
       const res = await firstValueFrom(
-        this.httpService.get(`${process.env.USER_SERVICE_URL}/user/${userId}`),
+        this.httpService.get(`${process.env.USER_SERVICE_URL}/user/${userId}`, {
+          headers: {
+            Authorization: bearerToken,
+          },
+        }),
       );
-      if (!res.data.data) throw new Error('User not found');
 
-      return res.data.data;
+      if (!res.data[0]) throw new Error('User not found');
+
+      return res.data[0];
     } catch (error) {
       this.logger.error(error.message);
       throw new BadRequestException(error.message);
     }
   }
 }
+``;

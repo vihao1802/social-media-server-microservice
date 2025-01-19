@@ -36,7 +36,6 @@ export class AuthService {
 
   async verifyUser(signInRequest: SignInRequest) {
     const user = await this.userService.findByEmail(signInRequest.email);
-
     if (!user)
       throw new BadRequestException(
         ErrorCodes.BadRequestCode.INVALID_EMAIL_PASSWORD,

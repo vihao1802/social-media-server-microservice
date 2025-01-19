@@ -1,16 +1,16 @@
-import { ArgumentMetadata, PipeTransform } from "@nestjs/common";
-import { ZodError, ZodSchema } from "zod";
+import { ArgumentMetadata, Logger, PipeTransform } from '@nestjs/common';
+import { ZodError, ZodSchema } from 'zod';
 
 export class zodValidationPipe implements PipeTransform {
-    constructor(private schema: ZodSchema) { }
+  private readonly logger = new Logger(zodValidationPipe.name);
 
-    transform(value: any, metadata: ArgumentMetadata) {
-        const parsedValue = this.schema.safeParse(value);
-        if (parsedValue.success)
-            return parsedValue.data;
+  constructor(private schema: ZodSchema) {}
 
-        throw new ZodError(parsedValue.error.errors);
+  transform(value: any, metadata: ArgumentMetadata) {
+    const parsedValue = this.schema.safeParse(value);
+    if (parsedValue.success) return parsedValue.data;
 
-    }
-
+    this.logger.error(parsedValue.error.errors);
+    throw new ZodError(parsedValue.error.errors);
+  }
 }

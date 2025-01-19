@@ -7,6 +7,10 @@ export class zodValidationPipe implements PipeTransform {
   constructor(private schema: ZodSchema) {}
 
   transform(value: any, metadata: ArgumentMetadata) {
+    // Chỉ validate nếu type là 'query'
+    if (metadata.type !== 'query') {
+      return value;
+    }
     const parsedValue = this.schema.safeParse(value);
     if (parsedValue.success) return parsedValue.data;
 

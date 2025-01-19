@@ -58,7 +58,7 @@ services:
       - ./.env.global
       - ./chat-service/.env
     environment:
-     MINIO_BUCKET_PATH: chat-service
+      MINIO_BUCKET_PATH: chat-service
 
   user-service-container:
     build:
@@ -78,6 +78,20 @@ services:
       - ./user-service/.env
     environment:
       MINIO_BUCKET_PATH: user-service
+
+  relationship-service-container:
+    build:
+      context: ./relationship-service
+      dockerfile: Dockerfile
+    image: relationship-service:latest
+    container_name: "relationship-service-container"
+    ports:
+      - "8105:8105"
+    networks:
+      - user-network
+    env_file:
+      - ./.env.global
+      - ./relationship-service/.env
 
 networks:
   chat-network:

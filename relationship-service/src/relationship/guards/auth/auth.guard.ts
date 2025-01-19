@@ -27,9 +27,10 @@ export class AuthGuard implements CanActivate {
           },
         }),
       );
-      console.log('response:', response.data.data);
-      request.user = response.data.data;
-
+      request.user = {
+        ...response.data.data[0], // Lấy toàn bộ thông tin user từ API
+        Token: BearerToken, // Thêm token vào object user
+      };
       return true;
     } catch (error) {
       console.error('Error fetching users:', error);

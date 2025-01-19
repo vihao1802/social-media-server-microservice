@@ -18,9 +18,17 @@ import { excludeFields } from 'src/utils/helper.util';
 export class UserService {
   constructor(private readonly databaseService: DatabaseService) {}
   async findMany(paginationDto: PaginationDto) {
+    if (
+      paginationDto.orderBy === '' ||
+      paginationDto.orderBy in Prisma.UserScalarFieldEnum
+    ) {
+      throw new BadRequestException(
+        ErrorCodes.BadRequestCode.INVALID_REQUEST,
+        `${paginationDto.orderBy} is not a valid field`,
+      );
+    }
     const skip = (paginationDto.page - 1) * paginationDto.pageSize || 0;
     const take = paginationDto.pageSize || 5;
-
     const [users, total] = await Promise.all([
       this.databaseService.user.findMany({
         skip,
@@ -93,19 +101,19 @@ export class UserService {
 
   async findOne(id: string) {
     try {
-      const { hashedPassword, ...userWithoutPassword } =
-        await this.databaseService.user.findUnique({
-          where: {
-            id: id,
-          },
-          include: {
-            role: {
-              select: {
-                roleName: true,
-              },
+      const user = await this.databaseService.user.findUnique({
+        where: {
+          id: id,
+        },
+        include: {
+          role: {
+            select: {
+              roleName: true,
             },
           },
-        });
+        },
+      });
+      const userWithoutPassword = excludeFields([user], ['hashedPassword']);
       return userWithoutPassword;
     } catch (error) {
       console.error(error);
