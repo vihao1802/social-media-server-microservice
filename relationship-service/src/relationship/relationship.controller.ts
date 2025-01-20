@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   HttpStatus,
+  Param,
   Post,
   Query,
   Req,
@@ -25,7 +26,7 @@ export class RelationshipController {
   @UsePipes(new zodValidationPipe(PaginationSchema))
   async GetMyFollowing(@Request() req, @Query() paginationDto: PaginationDto) {
     const result = await this.relationshipService.GetUserFollowingList(
-      req.user.id,
+      req.user,
       paginationDto,
     );
     return new ApiResponse(HttpStatus.OK, result);
@@ -34,15 +35,18 @@ export class RelationshipController {
   @Get(':userId/following')
   @UsePipes(new zodValidationPipe(PaginationSchema))
   async GetUserFollowing(
-    @Query('userId') userId: string,
+    @Request() req,
     @Query() paginationDto: PaginationDto,
+    @Param('userId') userId: string,
   ) {
     const result = await this.relationshipService.GetUserFollowingList(
-      userId,
+      req.user,
       paginationDto,
+      userId,
     );
     return new ApiResponse(HttpStatus.OK, result);
   }
+
   @Get('me/follower')
   async GetMyFollower(@Request() req, @Query() paginationDto: PaginationDto) {
     const result = await this.relationshipService.GetUserFollowerList(
@@ -54,67 +58,75 @@ export class RelationshipController {
 
   @Get(':userId/follower')
   async GetUserFollower(
-    @Query('userId') userId: string,
+    @Request() req,
+    @Param('userId') userId: string,
     @Query() paginationDto: PaginationDto,
   ) {
     const result = await this.relationshipService.GetUserFollowerList(
-      userId,
+      req.user,
       paginationDto,
+      userId,
     );
     return new ApiResponse(HttpStatus.OK, result);
   }
 
   @Post('follow/:userId')
-  async FollowUser(@Request() req, @Query('userId') userId: string) {
-    await this.relationshipService.FollowUser(req.user.id, userId);
+  async FollowUser(@Request() req, @Param('userId') userId: string) {
+    console.log('userId', userId);
+
+    await this.relationshipService.FollowUser(req.user, userId);
     return new ApiResponse(HttpStatus.OK, 'Followed successfully');
   }
 
   @Post('unfollow/:userId')
-  async UnFollowUser(@Request() req, @Query('userId') userId: string) {
-    await this.relationshipService.UnFollowUser(req.user.id, userId);
+  async UnFollowUser(@Request() req, @Param('userId') userId: string) {
+    await this.relationshipService.UnFollowUser(req.user, userId);
     return new ApiResponse(HttpStatus.OK, 'Unfollowed successfully');
   }
 
   @Post('accept/:userId')
   async AcceptUserFollowRequest(
     @Request() req,
-    @Query('userId') userId: string,
+    @Param('userId') userId: string,
   ) {
-    await this.relationshipService.AcceptUserFollowRequest(userId, req.user.id);
+    await this.relationshipService.AcceptUserFollowRequest(userId, req.user);
     return new ApiResponse(HttpStatus.OK, 'Accepted successfully');
   }
 
   @Post('reject/:userId')
   async RejectUserFollowRequest(
     @Request() req,
-    @Query('userId') userId: string,
+    @Param('userId') userId: string,
   ) {
-    await this.relationshipService.RejectUserFollowRequest(userId, req.user.id);
+    await this.relationshipService.RejectUserFollowRequest(userId, req.user);
     return new ApiResponse(HttpStatus.OK, 'Rejected successfully');
   }
 
   @Get('me/block-list')
-  async GetMyBlockList(@Request() req) {
-    return await this.relationshipService.GetMyBlockList(req.user.id);
+  @UsePipes(new zodValidationPipe(PaginationSchema))
+  async GetMyBlockList(@Request() req, @Query() paginationDto: PaginationDto) {
+    return await this.relationshipService.GetMyBlockList(
+      req.user,
+      paginationDto,
+    );
   }
 
-  @Post(':userId/block')
-  async BlockUser(@Request() req, @Query('userId') userId: string) {
-    return await this.relationshipService.BlockUser(req.user.id, userId);
+  @Post('block/:userId')
+  async BlockUser(@Request() req, @Param('userId') userId: string) {
+    return await this.relationshipService.BlockUser(req.user, userId);
   }
-  @Post(':userId/unblock')
-  async UnBlockUser(@Query('userId') userId: string, @Request() req) {
-    return await this.relationshipService.UnblockerUser(req.user.id, userId);
+  @Post('unblock/:userId')
+  async UnBlockUser(@Param('userId') userId: string, @Request() req) {
+    return await this.relationshipService.UnblockerUser(req.user, userId);
   }
-  // @Get('me/recommendation')
-  // async GetRecommendation(
-  //   @Request() req,
-  //   @Query() paginationDto: PaginationDto,
-  // ) {
-  //   return await this.relationshipService.GetRecommendation(
-  //     req.user.id,
-  //     paginationDto,
-  //   );
-  // }
+  @Get('me/recommendation')
+  async GetRecommendation(
+    @Request() req,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return await this.relationshipService.GetRecommendation(
+      req.user.id,
+      paginationDto,
+    );
+  }
 }
