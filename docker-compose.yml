@@ -8,11 +8,13 @@ services:
     depends_on:
       - chat-service-container
       - user-service-container
+      - relationship-service-container
     ports:
       - "8080:8080"
     environment:
       CHAT_SERVICE_URL: http://chat-service-container:8101
       USER_SERVICE_URL: http://user-service-container:8103
+      RELATIONSHIP_SERVICE_URL: http://relationship-service-container:8105
     networks:
       - shared-network
 
@@ -89,9 +91,12 @@ services:
       - "8105:8105"
     networks:
       - user-network
+      - shared-network
     env_file:
       - ./.env.global
       - ./relationship-service/.env
+    environment:
+      USER_SERVICE_URL: http://user-service-container:8103
 
 networks:
   chat-network:
