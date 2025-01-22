@@ -29,3 +29,13 @@ spring:
           uri: ${RELATIONSHIP_SERVICE_URL}
           predicates:
             - Path=/relationship/**
+
+        - id: post-service
+          uri: ${POST_SERVICE_URL}
+          predicates:
+            - Path=/posts/**,/post_media/**,/post_viewer/**
+
+        - id: comment-service'
+          uri: ${COMMENT_SERVICE_URL}
+          predicates:
+            - Path=/comments/**,/comment_reaction/**

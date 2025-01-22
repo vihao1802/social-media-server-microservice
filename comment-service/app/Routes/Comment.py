@@ -4,7 +4,7 @@ from bson import ObjectId
 from fastapi import APIRouter, status, UploadFile, File, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.motor import paginate
-from app.Config.minio_client import bucket_name, minio_client
+from app.Config.minio_client import service_preflex, bucket_name, minio_client
 from app.Database.database import comments_collection
 from app.Models.Comment import CommentResponse, CommentUpdate, CommentModeration, TypeModeration
 from app.Utils.ContentModeration import content_moderation
@@ -38,7 +38,7 @@ async def create(post_id: str,
 
         if media_file:
             media = media_file
-            media_url = f"{bucket_name}/{media.filename}"
+            media_url = f"{service_preflex}/{media.filename}"
             minio_client.put_object(bucket_name, media_url, media.file, -1,media.content_type, part_size=10*1024*1024)
             request_data["mediaUrl"] = media_url
             list_moderation.append(CommentModeration(content=media_url, type=TypeModeration.IMAGE_URL))

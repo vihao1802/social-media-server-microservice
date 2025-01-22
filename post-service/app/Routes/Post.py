@@ -47,7 +47,7 @@ async def get(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
 
-@post_router.post("/", status_code=status.HTTP_201_CREATED, response_model=PostResponse)
+@post_router.post("", status_code=status.HTTP_201_CREATED, response_model=PostResponse)
 async def create(post: PostRequest):
     try:
         request_data = post.dict()

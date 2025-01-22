@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status, HTTPException, Form, UploadFile, File
 from app.Database.database import postMedia_collection
 from app.Models.PostMedia import PostMediaResponse, MediaType
-from app.Config.minio_client import minio_client, bucket_name
+from app.Config.minio_client import service_preflex, minio_client, bucket_name
 from minio.error import InvalidResponseError
 
 postMedia_router = APIRouter(prefix="/post_media", tags=["PostMedia"])
@@ -22,7 +22,7 @@ async def create(
     try:
         media = media_file
         media_type = media_type
-        media_url = f"{post_id}/{media.filename}"
+        media_url = f"{service_preflex}/{media.filename}"
 
         minio_client.put_object(bucket_name, media_url, media.file, -1,media.content_type, part_size=10*1024*1024)
         new_post_media = {

@@ -9,12 +9,16 @@ services:
       - chat-service-container
       - user-service-container
       - relationship-service-container
+      - post-service-container
+      - comment-service-container
     ports:
       - "8080:8080"
     environment:
       CHAT_SERVICE_URL: http://chat-service-container:8101
       USER_SERVICE_URL: http://user-service-container:8103
       RELATIONSHIP_SERVICE_URL: http://relationship-service-container:8105
+      POST_SERVICE_URL: http://post-service-container:8102
+      COMMENT_SERVICE_URL: http://comment-service-container:8104
     networks:
       - shared-network
 
@@ -98,10 +102,72 @@ services:
     environment:
       USER_SERVICE_URL: http://user-service-container:8103
 
+  post-service-container:
+    build:
+      context: ./post-service
+      dockerfile: Dockerfile
+    image: post-service:latest
+    container_name: "post-service-container"
+    ports:
+      - "8102:8102"
+    depends_on:
+      - minio-storage
+    networks:
+      - post-network
+      - shared-network
+    env_file:
+      - ./.env.global
+      - ./post-service/.env
+    environment:
+      MINIO_BUCKET_PATH: post-service
+
+  post-service-db:
+    image: mongo:latest
+    container_name: "post-service-mongodb"
+    ports:
+      - "9002:27017"
+    volumes:
+      - ./post-service/mongo-data:/data/db
+    networks:
+      - post-network
+
+  comment-service-container:
+    build:
+      context: ./comment-service
+      dockerfile: Dockerfile
+    image: comment-service:latest
+    container_name: "comment-service-container"
+    ports:
+      - "8104:8104"
+    depends_on:
+      - minio-storage
+    networks:
+      - comment-network
+      - shared-network
+    env_file:
+      - ./.env.global
+      - ./comment-service/.env
+    environment:
+      MINIO_BUCKET_PATH: comment-service
+
+  comment-service-db:
+    image: mongo:latest
+    container_name: "comment-service-mongodb"
+    ports:
+      - "9003:27017"
+    volumes:
+      - ./comment-service/mongo-data:/data/db
+    networks:
+      - comment-network
+
 networks:
   chat-network:
     driver: bridge
   user-network:
     driver: bridge
   shared-network:
+    driver: bridge
+  post-network:
+    driver: bridge
+  comment-network:
     driver: bridge
