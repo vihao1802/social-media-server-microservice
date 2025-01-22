@@ -25,6 +25,11 @@ spring:
           predicates:
             - Path=/user/**,/auth/**
 
+        - id: relationship-service
+          uri: ${RELATIONSHIP_SERVICE_URL}
+          predicates:
+            - Path=/relationship/**
+
         - id: post-service
           uri: ${POST_SERVICE_URL}
           predicates:

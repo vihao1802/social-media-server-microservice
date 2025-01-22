@@ -1,6 +1,6 @@
 export type User = {
-  email: string;
   id: string;
+  email: string;
   hashedPassword: string;
   bio: string | null;
   username: string;
@@ -14,6 +14,7 @@ export type User = {
   isPrivateAccount: boolean;
   createdAt: DateTime;
   role: Role;
+  Token?: string;
 };
 
 type Role = {

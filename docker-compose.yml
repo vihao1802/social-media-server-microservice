@@ -8,6 +8,7 @@ services:
     depends_on:
       - chat-service-container
       - user-service-container
+      - relationship-service-container
       - post-service-container
       - comment-service-container
     ports:
@@ -15,6 +16,7 @@ services:
     environment:
       CHAT_SERVICE_URL: http://chat-service-container:8101
       USER_SERVICE_URL: http://user-service-container:8103
+      RELATIONSHIP_SERVICE_URL: http://relationship-service-container:8105
       POST_SERVICE_URL: http://post-service-container:8102
       COMMENT_SERVICE_URL: http://comment-service-container:8104
     networks:
@@ -62,7 +64,7 @@ services:
       - ./.env.global
       - ./chat-service/.env
     environment:
-     MINIO_BUCKET_PATH: chat-service
+      MINIO_BUCKET_PATH: chat-service
 
   user-service-container:
     build:
@@ -82,6 +84,23 @@ services:
       - ./user-service/.env
     environment:
       MINIO_BUCKET_PATH: user-service
+
+  relationship-service-container:
+    build:
+      context: ./relationship-service
+      dockerfile: Dockerfile
+    image: relationship-service:latest
+    container_name: "relationship-service-container"
+    ports:
+      - "8105:8105"
+    networks:
+      - user-network
+      - shared-network
+    env_file:
+      - ./.env.global
+      - ./relationship-service/.env
+    environment:
+      USER_SERVICE_URL: http://user-service-container:8103
 
   post-service-container:
     build:
