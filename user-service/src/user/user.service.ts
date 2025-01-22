@@ -1,5 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
+import { Express } from 'express';
 import { UserResponseDTO } from './dto/userResponse.dto';
 import { Prisma, PrismaClient, User } from '@prisma/client';
 import { CreateUserDTO } from './dto/create-user.dto';
@@ -13,10 +18,15 @@ import { PaginationDto } from './dto/pagination.dto';
 import { RoleService } from 'src/role/role.service';
 import { UserResponse } from './types/user-response';
 import { excludeFields } from 'src/utils/helper.util';
+import { MinioService } from 'src/database/minio.service';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  private readonly logger = new Logger(UserService.name);
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly minioService: MinioService,
+  ) {}
   async findMany(paginationDto: PaginationDto) {
     if (
       paginationDto.orderBy === '' ||
@@ -273,6 +283,32 @@ export class UserService {
     });
   }
 
+  async updateAvatar(file: Express.Multer.File, authorizedUserId: string) {
+    try {
+      const avatarUrl = await this.minioService.uploadFile(
+        file.originalname,
+        file.buffer,
+        file.size,
+        file.mimetype,
+      );
+
+      return await this.databaseService.user.update({
+        where: {
+          id: authorizedUserId,
+        },
+        data: {
+          profileImg: avatarUrl,
+        },
+      });
+    } catch (error) {
+      this.logger.error(error);
+      throw new InternalServerErrorException(
+        ErrorCodes.InternalServerErrorCode.INTERNAL_SERVER_ERROR,
+        error.message,
+      );
+    }
+  }
+
   async hashedData(rawString: string): Promise<string> {
     try {
       const salt = await bcrypt.genSalt(Number(process.env.SALT_ROUNDS));
@@ -282,7 +318,6 @@ export class UserService {
     } catch (error) {
       throw new InternalServerException(
         ErrorCodes.InternalServerErrorCode.INTERNAL_SERVER_ERROR,
-        'Error when hashing ',
       );
     }
   }
