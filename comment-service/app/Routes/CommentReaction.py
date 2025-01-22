@@ -4,7 +4,7 @@ from fastapi import APIRouter, status, HTTPException
 from app.Database.database import comment_reaction_collection, comments_collection
 from app.Models.CommentReaction import CommentReactionRequest, CommentReactionResponse
 
-comment_reaction_router = APIRouter(prefix="/comment-reaction", tags=["Comment Reaction"])
+comment_reaction_router = APIRouter(prefix="/comment_reaction", tags=["Comment Reaction"])
 
 @comment_reaction_router.post("/", status_code=status.HTTP_201_CREATED, response_model=CommentReactionResponse)
 async def create(request_data: CommentReactionRequest):

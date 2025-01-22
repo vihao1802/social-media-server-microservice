@@ -1,15 +1,19 @@
 from minio import Minio
 from dotenv import load_dotenv
+from pathlib import Path
 import os
 
-load_dotenv()
+env_path = Path('..') / '.env.global'
+load_dotenv(dotenv_path=env_path)
 
 minio_client = Minio(
-    endpoint=os.getenv("MINIO_ENDPOINT"),
-    access_key=os.getenv("MINIO_ROOT_USER"),
-    secret_key=os.getenv("MINIO_ROOT_PASSWORD"),
+    endpoint=os.getenv("MINIO_URL").split("//")[1],
+    access_key=os.getenv("MINIO_ACCESS_KEY"),
+    secret_key=os.getenv("MINIO_SECRET_KEY"),
     secure=False
 )
+
+service_preflex = "post-service"
 
 # Tạo bucket nếu chưa tồn tại
 bucket_name = os.getenv("MINIO_BUCKET_NAME")
