@@ -1,0 +1,24 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Relationship {
+  Id         String   @id @default(cuid())
+  SenderId   String
+  ReceiverId String
+  Status     String   @default("pending")
+  Type       String   @default("follow")
+  CreatedAt  DateTime @default(now())
+  UpdatedAt  DateTime @updatedAt
+}

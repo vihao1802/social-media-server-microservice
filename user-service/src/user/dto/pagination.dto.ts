@@ -18,4 +18,3 @@ export const paginationSchema = z.object({
 });
 
 export type PaginationDto = z.infer<typeof paginationSchema>;
-``;

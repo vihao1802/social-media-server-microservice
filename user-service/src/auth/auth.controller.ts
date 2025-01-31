@@ -100,7 +100,7 @@ export class AuthController {
     const token = await this._authService.signIn(req.user);
 
     res.redirect(
-      `http://localhost:3000?access_token=${token.access_token}&refresh_token=${token.refresh_token}`,
+      `${process.env.CLIENT_DOMAIN}?access_token=${token.access_token}&refresh_token=${token.refresh_token}`,
     );
   }
   @Get('facebook/login')
