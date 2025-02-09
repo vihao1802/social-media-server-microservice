@@ -1,22 +1,39 @@
-from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
-from dotenv import load_dotenv
-import os
+from fastapi import HTTPException, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from httpx import AsyncClient, RequestError
+from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_500_INTERNAL_SERVER_ERROR
 
-load_dotenv()
+# HTTP Bearer Token Security Scheme
+security = HTTPBearer()
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-ALGORITHM = "HS256"
+async def verify_token(credentials: HTTPAuthorizationCredentials = Security(security)):
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+    token = credentials.credentials  # Extract token from Authorization header
+    auth_service_url = "http://api-gateway:8080/auth/me"  # URL of auth service
 
-def verify_token(token: str = Depends(oauth2_scheme)):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("username")
-        if username is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        return username
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Token verification failed")
+    async with AsyncClient() as client:
+        try:
+            # Send the request to the Auth service
+            response = await client.get(
+                auth_service_url,
+                headers={"Authorization": f"Bearer {token}"}
+            )
+
+            # Check if the response is successful
+            if response.status_code == 200:
+                user_data = response.json().get("data")
+                if user_data:
+                    return user_data  # Return user data if token is valid
+
+            # If response status is not 200 or data is missing, raise exception
+            raise HTTPException(
+                status_code=HTTP_401_UNAUTHORIZED,
+                detail="Invalid token or user not authenticated."
+            )
+
+        except RequestError as e:
+            # Handle connection errors or other request-related issues
+            raise HTTPException(
+                status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error connecting to Auth service: {str(e)}"
+            )
