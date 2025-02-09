@@ -1,21 +1,20 @@
 from fastapi import HTTPException
 import json
 from app.Config.openrouter_client import openai_client, moderation_prompt, model_name
-from app.Models.Comment import CommentModeration, TypeModeration
+from app.Models.Moderation import Moderation, TypeModeration
 import re
 
-def content_moderation(comment_moderation: list[CommentModeration]):
+def content_moderation(moderation: Moderation):
     try:
-        input_list = [{
-                          "type": "text",
-                          "text": comment.content
-                      } if comment.type == TypeModeration.TEXT else
-                      {
-                          "type": "image_url",
-                          "image_url": {
-                              "url": comment.content,
-                          }
-                      } for comment in comment_moderation]
+        content_list = [{
+            "type": "text",
+            "text": moderation.content
+        } if moderation.type == TypeModeration.TEXT else {
+            "type": "image_url",
+            "image_url": {
+                "url": moderation.content,
+            }
+        }]
 
         completion = openai_client.chat.completions.create(
             model=model_name,
@@ -26,7 +25,7 @@ def content_moderation(comment_moderation: list[CommentModeration]):
                 },
                 {
                     "role": "user",
-                    "content": input_list
+                    "content": content_list
                 }
             ]
         )
@@ -51,4 +50,5 @@ def content_moderation(comment_moderation: list[CommentModeration]):
         raise http_e
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        error_detail = str(e) if str(e) else "An unexpected error occurred"
+        raise HTTPException(status_code=500, detail=error_detail)

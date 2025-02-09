@@ -1,4 +1,6 @@
 from fastapi import APIRouter, status, HTTPException
+
+from app.Models.Moderation import Moderation, TypeModeration
 from app.Models.Post import PostRequest
 from app.Models.Post import PostResponse
 from app.Database.database import post_collection
@@ -6,6 +8,7 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.motor import paginate
 from bson import ObjectId
 
+from app.Utils.ContentModeration import content_moderation
 
 post_router = APIRouter(prefix="/posts", tags=["Posts"])
 
@@ -14,7 +17,7 @@ async def get():
     try:
         return await paginate(post_collection, transformer=PostResponse.from_mongo)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @post_router.get("/{post_id}", status_code=status.HTTP_200_OK)
 async def get(post_id: str):
@@ -28,7 +31,7 @@ async def get(post_id: str):
 
         return post
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @post_router.get(
@@ -38,25 +41,29 @@ async def get(creator_id: str):
     try:
         return await paginate(post_collection, {"creatorId": creator_id}, transformer=PostResponse.from_mongo)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @post_router.get("/story/user/{user_id}", status_code=status.HTTP_200_OK, response_model=Page[PostResponse])
 async def get(user_id: str):
     try:
         return await paginate(post_collection, {"creatorId": user_id, "isStory": True}, transformer=PostResponse.from_mongo)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @post_router.post("", status_code=status.HTTP_201_CREATED, response_model=PostResponse)
 async def create(post: PostRequest):
     try:
         request_data = post.dict()
         request_data["visibility"] = request_data["visibility"].value
-        result = await post_collection.insert_one(request_data)
 
-        return PostResponse(id=str(result.inserted_id), **request_data)
+        if not content_moderation(Moderation(content=request_data["content"], type=TypeModeration.TEXT)):
+            result = await post_collection.insert_one(request_data)
+            return PostResponse(id=str(result.inserted_id), **request_data)
+    except HTTPException as http_e:
+        raise http_e
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @post_router.put("/{post_id}", status_code=status.HTTP_200_OK, response_model=PostResponse)
 async def update(post_id: str, request_data: PostRequest):
@@ -71,7 +78,7 @@ async def update(post_id: str, request_data: PostRequest):
 
         return PostResponse(id=post_id, **post_data)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @post_router.patch("/{post_id}", status_code=status.HTTP_200_OK)
 async def delete(post_id: str):
@@ -85,4 +92,4 @@ async def delete(post_id: str):
 
         return {"message": "Post deleted successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
