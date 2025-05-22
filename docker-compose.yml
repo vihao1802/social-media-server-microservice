@@ -97,10 +97,13 @@ services:
       dockerfile: Dockerfile
     image: post-service:latest
     container_name: "post-service-container"
+    volumes:
+      - ./post-service:/app
     ports:
       - "8102:8102"
     depends_on:
       - minio-storage
+      - kafka
     networks:
       - post-network
       - shared-network
@@ -109,6 +112,13 @@ services:
       - ./post-service/.env
     environment:
       MINIO_BUCKET_PATH: post-service
+    develop:
+      watch:
+        - action: sync
+          path: ./post-service
+          target: /app
+        - action: rebuild
+          path: ./post-service/requirements.txt
 
   post-service-db:
     image: mongo:latest
@@ -116,7 +126,7 @@ services:
     ports:
       - "9002:27017"
     volumes:
-      - ./post-service/mongo-data:/data/db
+      - post_service_data:/data/db
     networks:
       - post-network
 
@@ -126,10 +136,13 @@ services:
       dockerfile: Dockerfile
     image: comment-service:latest
     container_name: "comment-service-container"
+    volumes:
+      - ./comment-service:/app
     ports:
       - "8104:8104"
     depends_on:
       - minio-storage
+      - kafka
     networks:
       - comment-network
       - shared-network
@@ -138,6 +151,14 @@ services:
       - ./comment-service/.env
     environment:
       MINIO_BUCKET_PATH: comment-service
+    develop:
+      watch:
+        - action: sync
+          path: ./comment-service
+          target: /app
+        - action: rebuild
+          path: ./comment-service/requirements.txt
+
 
   comment-service-db:
     image: mongo:latest
@@ -145,7 +166,7 @@ services:
     ports:
       - "9003:27017"
     volumes:
-      - ./comment-service/mongo-data:/data/db
+      - comment_service_data:/data/db
     networks:
       - comment-network
 
@@ -158,6 +179,19 @@ services:
       - ./.env.global
     networks:
       - shared-network
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop
+    container_name: kafdrop
+    ports:
+      - "9010:9000"
+    environment:
+      KAFKA_BROKERCONNECT: "kafka:9092"
+    depends_on:
+      - kafka
+    networks:
+      - shared-network
+
 
   notification-service-db:
     image: mongo:latest
@@ -192,3 +226,9 @@ networks:
     driver: bridge
   comment-network:
     driver: bridge
+
+volumes:
+    post_service_data:
+      external: true
+    comment_service_data:
+      external: true
