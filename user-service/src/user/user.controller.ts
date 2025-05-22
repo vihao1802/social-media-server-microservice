@@ -35,10 +35,7 @@ import { FileSizeValidationPipe } from './pipes/fileValidationPipe';
 @UseGuards(JwtAuthGuard)
 @Controller('user')
 export class UserController {
-  constructor(
-    private readonly userService: UserService,
-    private readonly minioService: MinioService,
-  ) {}
+  constructor(private readonly userService: UserService) {}
 
   @Get()
   @Roles([ROLE.USER])
@@ -68,10 +65,9 @@ export class UserController {
   @Patch('update/avatar')
   @UseInterceptors(FileInterceptor('file123'))
   updateAvatar(
-    @UploadedFile( new FileSizeValidationPipe() ) file: Express.Multer.File,
+    @UploadedFile(new FileSizeValidationPipe()) file: Express.Multer.File,
     @Request() req,
   ) {
-    
     const avatarUrl = this.userService.updateAvatar(file, req.user.sub);
 
     return new ApiResponse(

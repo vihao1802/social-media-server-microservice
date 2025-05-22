@@ -83,7 +83,7 @@ export class AuthService {
 
     const subject = 'Confirm email';
 
-    const url = `${process.env.SERVER_DOMAIN}/auth/confirm-email?token=${access_token}`;
+    const url = `${process.env.API_GATEWAY_DOMAIN}/auth/confirm-email?token=${access_token}`;
 
     return await this.mailService.sendVerifyEmailMail(
       email,

@@ -77,6 +77,7 @@ services:
       - "8103:8103"
     depends_on:
       - minio-storage
+      - kafka
     networks:
       - user-network
       - shared-network
@@ -94,6 +95,8 @@ services:
     container_name: "relationship-service-container"
     ports:
       - "8105:8105"
+    depends_on:
+      - kafka
     networks:
       - user-network
       - shared-network
@@ -131,15 +134,15 @@ services:
         - action: rebuild
           path: ./post-service/requirements.txt
 
-  post-service-db:
-    image: mongo:latest
-    container_name: "post-service-mongodb"
-    ports:
-      - "9002:27017"
-    volumes:
-      - post_service_data:/data/db
-    networks:
-      - post-network
+  # post-service-db:
+  #   image: mongo:latest
+  #   container_name: "post-service-mongodb"
+  #   ports:
+  #     - "9002:27017"
+  #   volumes:
+  #     - post_service_data:/data/db
+  #   networks:
+  #     - post-network
 
   comment-service-container:
     build:
@@ -169,16 +172,15 @@ services:
         - action: rebuild
           path: ./comment-service/requirements.txt
 
-
-  comment-service-db:
-    image: mongo:latest
-    container_name: "comment-service-mongodb"
-    ports:
-      - "9003:27017"
-    volumes:
-      - comment_service_data:/data/db
-    networks:
-      - comment-network
+  # comment-service-db:
+  #   image: mongo:latest
+  #   container_name: "comment-service-mongodb"
+  #   ports:
+  #     - "9003:27017"
+  #   volumes:
+  #     - comment_service_data:/data/db
+  #   networks:
+  #     - comment-network
 
   kafka:
     image: "bitnami/kafka:latest"
@@ -225,9 +227,8 @@ networks:
     driver: bridge
   comment-network:
     driver: bridge
-
-volumes:
-    post_service_data:
-      external: true
-    comment_service_data:
-      external: true
+  # volumes:
+  # post_service_data:
+  #   external: true
+  # comment_service_data:
+  #   external: true

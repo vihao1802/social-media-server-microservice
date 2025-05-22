@@ -81,7 +81,7 @@ export class AuthController {
     };
   }
 
-  @Post('/introspect')
+  @Post('introspect')
   @UseGuards(JwtAuthGuard)
   async Introspect(@Request() req) {
     return {
@@ -99,9 +99,11 @@ export class AuthController {
   async googleCallback(@Request() req, @Res() res) {
     const token = await this._authService.signIn(req.user);
 
-    res.redirect(
-      `${process.env.CLIENT_DOMAIN}?access_token=${token.access_token}&refresh_token=${token.refresh_token}`,
-    );
+    res
+      .status(302)
+      .redirect(
+        `${process.env.CLIENT_DOMAIN}/callback?access_token=${token.access_token}&refresh_token=${token.refresh_token}`,
+      );
   }
   @Get('facebook/login')
   @UseGuards(FacebookAuthGuard)
@@ -112,9 +114,11 @@ export class AuthController {
   async facebookCallback(@Request() req, @Response() res) {
     const token = await this._authService.signIn(req.user);
 
-    res.redirect(
-      `http://localhost:3000?access_token=${token.access_token}&refresh_token=${token.refresh_token}`,
-    );
+    res
+      .status(302)
+      .redirect(
+        `${process.env.CLIENT_DOMAIN}/callback?access_token=${token.access_token}&refresh_token=${token.refresh_token}`,
+      );
   }
 
   @UseGuards(JwtAuthGuard)
@@ -149,7 +153,7 @@ export class AuthController {
   @Get('confirm-email')
   async verifyEmail(@Query('token') token: string, @Res() res) {
     await this._authService.confirmEmail(token);
-    res.redirect(`http://localhost:3000`);
+    res.redirect(process.env.CLIENT_DOMAIN);
   }
 
   @Post('forgot-password')
