@@ -115,6 +115,7 @@ services:
       - "8102:8102"
     depends_on:
       - minio-storage
+      - kafka
     networks:
       - post-network
       - shared-network
@@ -153,6 +154,7 @@ services:
       - "8104:8104"
     depends_on:
       - minio-storage
+      - kafka
     networks:
       - comment-network
       - shared-network
@@ -189,6 +191,19 @@ services:
       - ./.env.global
     networks:
       - shared-network
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop
+    container_name: kafdrop
+    ports:
+      - "9010:9000"
+    environment:
+      KAFKA_BROKERCONNECT: "kafka:9092"
+    depends_on:
+      - kafka
+    networks:
+      - shared-network
+
 
   notification-service-db:
     image: mongo:latest
