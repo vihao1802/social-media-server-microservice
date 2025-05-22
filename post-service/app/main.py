@@ -1,4 +1,6 @@
 from fastapi import FastAPI, Depends
+
+from app.Config.kafka_producer import kafka_producer
 from app.Routes.Post import post_router
 from app.Routes.PostMedia import postMedia_router
 from app.Routes.PostViewer import postViewer_router
@@ -13,10 +15,19 @@ app = FastAPI(
     dependencies=[Depends(verify_token)],
 )
 
-# Đăng ký route
+# Register routes
 app.include_router(post_router)
 app.include_router(postViewer_router)
 app.include_router(postMedia_router)
 
-
+# Add pagination
 add_pagination(app)
+
+@app.on_event("startup")
+async def startup():
+    await kafka_producer.start()
+
+@app.on_event("shutdown")
+async def shutdown():
+    await kafka_producer.stop()
+
