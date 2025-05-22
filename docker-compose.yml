@@ -22,16 +22,6 @@ services:
     networks:
       - shared-network
 
-  chat-service-db:
-    image: mongo:latest
-    container_name: "chat-service-mongodb"
-    ports:
-      - "27017:27017"
-    volumes:
-      - ./chat-service/mongo-data:/data/db
-    networks:
-      - chat-network
-
   minio-storage:
     image: quay.io/minio/minio:latest
     container_name: "minio-storage"
@@ -55,11 +45,9 @@ services:
     ports:
       - "8101:8101"
     depends_on:
-      - chat-service-db
       - minio-storage
       - kafka
     networks:
-      - chat-network
       - shared-network
     env_file:
       - ./.env.global
@@ -230,8 +218,6 @@ services:
       - shared-network
 
 networks:
-  chat-network:
-    driver: bridge
   user-network:
     driver: bridge
   shared-network:

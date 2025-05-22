@@ -83,3 +83,5 @@ minio-data/
 
 /post-service/.env
 /comment-service/.env
+
+mongo-data/
