@@ -22,16 +22,6 @@ services:
     networks:
       - shared-network
 
-  chat-service-db:
-    image: mongo:latest
-    container_name: "chat-service-mongodb"
-    ports:
-      - "27017:27017"
-    volumes:
-      - ./chat-service/mongo-data:/data/db
-    networks:
-      - chat-network
-
   minio-storage:
     image: quay.io/minio/minio:latest
     container_name: "minio-storage"
@@ -49,17 +39,19 @@ services:
   chat-service-container:
     build:
       context: ./chat-service
-      dockerfile: Dockerfile
     image: chat-service:latest
     container_name: "chat-service-container"
+    working_dir: /app
+    command: sh run.sh
     ports:
       - "8101:8101"
+    volumes:
+      - ./chat-service:/app
+      - ~/.m2:/root/.m2 # cache dependencies
     depends_on:
-      - chat-service-db
       - minio-storage
       - kafka
     networks:
-      - chat-network
       - shared-network
     env_file:
       - ./.env.global
@@ -135,16 +127,6 @@ services:
         - action: rebuild
           path: ./post-service/requirements.txt
 
-  # post-service-db:
-  #   image: mongo:latest
-  #   container_name: "post-service-mongodb"
-  #   ports:
-  #     - "9002:27017"
-  #   volumes:
-  #     - post_service_data:/data/db
-  #   networks:
-  #     - post-network
-
   comment-service-container:
     build:
       context: ./comment-service
@@ -174,16 +156,6 @@ services:
         - action: rebuild
           path: ./comment-service/requirements.txt
 
-  # comment-service-db:
-  #   image: mongo:latest
-  #   container_name: "comment-service-mongodb"
-  #   ports:
-  #     - "9003:27017"
-  #   volumes:
-  #     - comment_service_data:/data/db
-  #   networks:
-  #     - comment-network
-
   kafka:
     image: "bitnami/kafka:latest"
     container_name: kafka
@@ -206,11 +178,9 @@ services:
     networks:
       - shared-network
 
-
   notification-service-db:
     image: mongo:latest
     container_name: "notification-service-mongodb"
-    command: mongod --port 9006
     ports:
       - "9006:9006"
     volumes:
@@ -223,8 +193,13 @@ services:
       context: ./notification-service
     image: notification-service:latest
     container_name: notification-service-container
+    working_dir: /app
+    command: sh run.sh
     ports:
       - "8106:8106"
+    volumes:
+      - ./notification-service:/app
+      - ~/.m2:/root/.m2 # cache dependencies
     depends_on:
       - kafka
       - notification-service-db
@@ -232,8 +207,6 @@ services:
       - shared-network
 
 networks:
-  chat-network:
-    driver: bridge
   user-network:
     driver: bridge
   shared-network:
@@ -242,8 +215,9 @@ networks:
     driver: bridge
   comment-network:
     driver: bridge
-  # volumes:
-  # post_service_data:
-  #   external: true
-  # comment_service_data:
-  #   external: true
+
+volumes:
+  post_service_data:
+    external: true
+  comment_service_data:
+    external: true
