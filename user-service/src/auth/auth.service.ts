@@ -111,7 +111,9 @@ export class AuthService {
     const usr = await this.userService.findByEmail(email);
 
     if (!usr)
-      throw new BadRequestException(ErrorCodes.BadRequestCode.USER_NOT_FOUND);
+      throw new BadRequestException(
+        ErrorCodes.BadRequestCode.RESOURCE_NOT_FOUND,
+      );
 
     if (!usr.isEmailVerified)
       throw new BadRequestException(
@@ -151,6 +153,9 @@ export class AuthService {
           email,
         },
       },
+      orderBy: {
+        createdAt: 'desc',
+      },
       include: {
         user: true,
       },
@@ -162,8 +167,9 @@ export class AuthService {
     if (
       otpData.createdAt.getTime() + parseInt(process.env.OTP_EXPIRES_IN) <
       Date.now()
-    )
+    ) {
       throw new BadRequestException(ErrorCodes.BadRequestCode.OTP_EXPIRED);
+    }
 
     const isValid = await bcrypt.compare(otp, otpData.otp);
 

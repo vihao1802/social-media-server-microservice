@@ -166,12 +166,12 @@ export class AuthController {
   }
 
   @Post('verify-otp')
-  async verifyOtp(@Body('email') email: string, @Body('otpCode') otp: string) {
+  async verifyOtp(@Body('email') email: string, @Body('otp') otp: string) {
     const resetToken = await this._authService.verifyOTP(email, otp);
     if (resetToken) {
       return {
         status: 200,
-        data: resetToken,
+        data: resetToken.access_token,
         message: 'OTP verified successfully',
       };
     }
