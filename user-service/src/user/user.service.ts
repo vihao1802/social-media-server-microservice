@@ -124,7 +124,7 @@ export class UserService {
         },
       });
       const userWithoutPassword = excludeFields([user], ['hashedPassword']);
-      return userWithoutPassword;
+      return userWithoutPassword[0];
     } catch (error) {
       console.error(error);
       throw new InternalServerException(

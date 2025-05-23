@@ -47,7 +47,10 @@ export class UserController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.userService.findOne(id);
+    return {
+      status: 200,
+      data: this.userService.findOne(id),
+    };
   }
 
   @Patch('update')
