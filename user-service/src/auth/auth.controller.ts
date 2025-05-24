@@ -135,19 +135,11 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('send-confirm-email')
   async sendConfirmEmail(@Request() req) {
-    if (
-      (await this._authService.sendConfirmEmail(req.user.email)) === 'success'
-    ) {
-      return {
-        status: 200,
-        message: 'Email sent',
-      };
-    } else {
-      return {
-        status: 500,
-        message: 'Email sent failed',
-      };
-    }
+    await this._authService.sendVerifyEmail(req.user.email);
+    return {
+      status: 200,
+      message: 'Email sent!',
+    };
   }
 
   @Get('confirm-email')

@@ -3,6 +3,8 @@ package com.vihao.notificationservice.controller;
 import com.fasterxml.jackson.databind.util.JSONPObject;
 import com.vihao.notificationservice.dto.kafka.MemberMessage;
 import com.vihao.notificationservice.dto.kafka.PostMessage;
+import com.vihao.notificationservice.dto.kafka.OTPMessage;
+import com.vihao.notificationservice.dto.kafka.VerifyMessage;
 import com.vihao.notificationservice.service.EmailService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -30,5 +32,16 @@ public class EmailController {
     @KafkaListener(topics = "create-post")
     public void consumingPostCreationEvent(PostMessage message) {
         log.info("Message received: {}", message);
+    }
+
+    @KafkaListener(topics = "get-otp")
+    public void consumingGetOTPEvent(OTPMessage message) {
+        log.info("Message received: {}", message);
+        this.emailService.sendEmail(message);
+    }
+    @KafkaListener(topics = "verify-email")
+    public void consumingVerifyEmailEvent(VerifyMessage message) {
+        log.info("Message received: {}", message);
+        this.emailService.sendEmail(message);
     }
 }

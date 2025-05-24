@@ -42,7 +42,7 @@ services:
     image: chat-service:latest
     container_name: "chat-service-container"
     working_dir: /app
-    command: sh run.sh
+    command: bash run.sh
     ports:
       - "8101:8101"
     volumes:
@@ -194,7 +194,7 @@ services:
     image: notification-service:latest
     container_name: notification-service-container
     working_dir: /app
-    command: sh run.sh
+    command: bash run.sh
     ports:
       - "8106:8106"
     volumes:

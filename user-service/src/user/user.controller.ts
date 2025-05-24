@@ -13,6 +13,7 @@ import {
   UseInterceptors,
   UploadedFile,
   HttpStatus,
+  Inject,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { Express } from 'express';
@@ -27,7 +28,6 @@ import { PaginationDto, paginationSchema } from './dto/pagination.dto';
 import { Roles } from 'src/auth/decorator/role.decorator';
 import { ROLE } from 'src/auth/enum/role.constant';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
-import { MinioService } from 'src/database/minio.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiResponse } from './dto/response/api-response.dto';
 import { FileSizeValidationPipe } from './pipes/fileValidationPipe';
