@@ -81,7 +81,7 @@ export class AuthController {
     };
   }
 
-  @Post('/introspect')
+  @Post('introspect')
   @UseGuards(JwtAuthGuard)
   async Introspect(@Request() req) {
     return {
@@ -99,9 +99,11 @@ export class AuthController {
   async googleCallback(@Request() req, @Res() res) {
     const token = await this._authService.signIn(req.user);
 
-    res.redirect(
-      `${process.env.CLIENT_DOMAIN}?access_token=${token.access_token}&refresh_token=${token.refresh_token}`,
-    );
+    res
+      .status(302)
+      .redirect(
+        `${process.env.CLIENT_DOMAIN}/callback?access_token=${token.access_token}&refresh_token=${token.refresh_token}`,
+      );
   }
   @Get('facebook/login')
   @UseGuards(FacebookAuthGuard)
@@ -112,9 +114,11 @@ export class AuthController {
   async facebookCallback(@Request() req, @Response() res) {
     const token = await this._authService.signIn(req.user);
 
-    res.redirect(
-      `http://localhost:3000?access_token=${token.access_token}&refresh_token=${token.refresh_token}`,
-    );
+    res
+      .status(302)
+      .redirect(
+        `${process.env.CLIENT_DOMAIN}/callback?access_token=${token.access_token}&refresh_token=${token.refresh_token}`,
+      );
   }
 
   @UseGuards(JwtAuthGuard)
@@ -131,25 +135,17 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('send-confirm-email')
   async sendConfirmEmail(@Request() req) {
-    if (
-      (await this._authService.sendConfirmEmail(req.user.email)) === 'success'
-    ) {
-      return {
-        status: 200,
-        message: 'Email sent',
-      };
-    } else {
-      return {
-        status: 500,
-        message: 'Email sent failed',
-      };
-    }
+    await this._authService.sendVerifyEmail(req.user.email);
+    return {
+      status: 200,
+      message: 'Email sent!',
+    };
   }
 
   @Get('confirm-email')
   async verifyEmail(@Query('token') token: string, @Res() res) {
     await this._authService.confirmEmail(token);
-    res.redirect(`http://localhost:3000`);
+    res.redirect(process.env.CLIENT_DOMAIN);
   }
 
   @Post('forgot-password')
@@ -162,12 +158,12 @@ export class AuthController {
   }
 
   @Post('verify-otp')
-  async verifyOtp(@Body('email') email: string, @Body('otpCode') otp: string) {
+  async verifyOtp(@Body('email') email: string, @Body('otp') otp: string) {
     const resetToken = await this._authService.verifyOTP(email, otp);
     if (resetToken) {
       return {
         status: 200,
-        data: resetToken,
+        data: resetToken.access_token,
         message: 'OTP verified successfully',
       };
     }

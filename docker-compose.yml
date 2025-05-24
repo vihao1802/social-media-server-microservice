@@ -69,6 +69,7 @@ services:
       - "8103:8103"
     depends_on:
       - minio-storage
+      - kafka
     networks:
       - user-network
       - shared-network
@@ -86,6 +87,8 @@ services:
     container_name: "relationship-service-container"
     ports:
       - "8105:8105"
+    depends_on:
+      - kafka
     networks:
       - user-network
       - shared-network
