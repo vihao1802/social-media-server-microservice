@@ -85,3 +85,4 @@ minio-data/
 /comment-service/.env
 
 mongo-data/
+.m2
