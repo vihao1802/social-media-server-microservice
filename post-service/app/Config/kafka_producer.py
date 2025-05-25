@@ -1,7 +1,9 @@
 from aiokafka import AIOKafkaProducer
+from aiokafka.errors import KafkaConnectionError
 import json
 from dotenv import load_dotenv
 import os
+import asyncio
 
 load_dotenv()
 
@@ -10,12 +12,21 @@ class KafkaProducer:
         self.bootstrap_servers = bootstrap_servers
         self.producer = None
 
-    async def start(self):
+    async def start(self, max_retries=10, retry_interval=3):
         self.producer = AIOKafkaProducer(
             bootstrap_servers=self.bootstrap_servers,
             value_serializer=lambda v: json.dumps(v).encode("utf-8")
         )
-        await self.producer.start()
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                await self.producer.start()
+                return
+            except KafkaConnectionError as e:
+                print(f"Kafka not ready yet ({attempt}/{max_retries}): {e}")
+                await asyncio.sleep(retry_interval)
+
+        raise RuntimeError("Failed to connect to Kafka after multiple retries.")
 
     async def send(self, topic: str, message: dict, headers=None):
         await self.producer.send(topic, value=message, headers=headers)
@@ -26,7 +37,3 @@ class KafkaProducer:
 
 # Initialize Kafka producer
 kafka_producer = KafkaProducer()
-
-header_value = json.dumps({
-    "PostMessage": "com.vihao.notificationservice.dto.kafka.PostMessage"
-}).encode("utf-8")

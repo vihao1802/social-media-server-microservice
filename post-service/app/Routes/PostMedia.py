@@ -3,7 +3,7 @@ from fastapi import APIRouter, status, HTTPException, Form, UploadFile, File
 from fastapi_pagination import response
 
 from app.Database.database import postMedia_collection, post_collection
-from app.Models.Moderation import Moderation, TypeModeration
+from app.Models.Moderation import Moderation
 from app.Models.PostMedia import PostMediaResponse, MediaType
 from app.Config.minio_client import service_preflex, minio_client, bucket_name
 from minio.error import InvalidResponseError
@@ -21,38 +21,35 @@ async def get(post_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
 
-@postMedia_router.post("", status_code=status.HTTP_201_CREATED, response_model=PostMediaResponse)
+@postMedia_router.post("", status_code=status.HTTP_201_CREATED,
+                       # response_model=PostMediaResponse
+                       )
 async def create(
         media_type: MediaType = Form(...),
         media_file: UploadFile = File(...),
-        post_id: str = Form(...)):
+        post_id: str = Form(...)
+):
     try:
         post = await post_collection.find_one({"_id": ObjectId(post_id)})
 
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
 
-        if media_file:
-            # Handle image content moderation
-            base64_image = base64.b64encode(await media_file.read()).decode("utf-8")
+        if media_file and not await content_moderation(Moderation(content=media_file)):
+            # Save media file to Minio
+            media_url = f"{service_preflex}/{media_file.filename}"
 
-            image_str = f"data:{media_file.content_type};base64,{base64_image}"
+            minio_client.put_object(bucket_name, media_url, media_file.file, -1,media_file.content_type, part_size=10*1024*1024)
 
-            if not content_moderation(Moderation(content=image_str, type=TypeModeration.IMAGE_URL)):
-                # Save media file to Minio
-                media_url = f"{service_preflex}/{media_file.filename}"
+            new_post_media = {
+                "mediaType": media_type.value,
+                "postId": post_id,
+                "mediaUrl": f"{bucket_name}/{media_url}"
+            }
 
-                minio_client.put_object(bucket_name, media_url, media_file.file, -1,media_file.content_type, part_size=10*1024*1024)
+            result = await postMedia_collection.insert_one(new_post_media)
 
-                new_post_media = {
-                    "mediaType": media_type.value,
-                    "postId": post_id,
-                    "mediaUrl": f"{bucket_name}/{media_url}"
-                }
-
-                result = await postMedia_collection.insert_one(new_post_media)
-
-                return PostMediaResponse(**new_post_media, id=str(result.inserted_id))
+            return PostMediaResponse(**new_post_media, id=str(result.inserted_id))
     except HTTPException as http_e:
         raise http_e
 

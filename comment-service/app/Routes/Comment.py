@@ -6,7 +6,7 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.motor import paginate
 from app.Config.minio_client import service_preflex, bucket_name, minio_client
 from app.Database.database import comments_collection
-from app.Models.Comment import CommentResponse, CommentUpdate, CommentModeration, TypeModeration
+from app.Models.Comment import CommentResponse, CommentUpdate
 from app.Utils.ContentModeration import content_moderation
 import base64
 
@@ -24,38 +24,39 @@ async def create(post_id: str,
                  reply_to: Optional[str] = None,
                  media_file: Annotated[UploadFile | None, File()] = None):
     try:
-        request_data = {
-            "postId": post_id,
-            "userId": user_id,
-            "content": content,
-            "createdAt": created_at,
-            "replyTo": reply_to,
-            "mediaUrl": None,
-            "isDelete": False,
-            "isEdited": False
-        }
-
-        list_moderation = [CommentModeration(content=content, type=TypeModeration.TEXT)] if content else []
-
-        if media_file:
-            # Handle image content moderation
-            base64_image = base64.b64encode(await media_file.read()).decode("utf-8")
-            image_str = f"data:{media_file.content_type};base64,{base64_image}"
-            list_moderation.append(CommentModeration(content=image_str, type=TypeModeration.IMAGE_URL))
-
-        if not list_moderation:
-            raise HTTPException(status_code=400, detail="No content to moderate")
-
-        if not content_moderation(list_moderation):
-            # Save media file to Minio
-            if media_file:
-                media_url = f"{service_preflex}/{media_file.filename}"
-                minio_client.put_object(bucket_name, media_url, media_file.file, -1,media_file.content_type, part_size=10*1024*1024)
-                request_data["mediaUrl"] = f"{bucket_name}/{media_url}"
-
-            # Insert comment to MongoDB
-            result = await comments_collection.insert_one(request_data)
-            return CommentResponse(id=str(result.inserted_id), **request_data)
+        pass
+        # request_data = {
+        #     "postId": post_id,
+        #     "userId": user_id,
+        #     "content": content,
+        #     "createdAt": created_at,
+        #     "replyTo": reply_to,
+        #     "mediaUrl": None,
+        #     "isDelete": False,
+        #     "isEdited": False
+        # }
+        #
+        # list_moderation = [CommentModeration(content=content, type=TypeModeration.TEXT)] if content else []
+        #
+        # if media_file:
+        #     # Handle image content moderation
+        #     base64_image = base64.b64encode(await media_file.read()).decode("utf-8")
+        #     image_str = f"data:{media_file.content_type};base64,{base64_image}"
+        #     list_moderation.append(CommentModeration(content=image_str, type=TypeModeration.IMAGE_URL))
+        #
+        # if not list_moderation:
+        #     raise HTTPException(status_code=400, detail="No content to moderate")
+        #
+        # if not content_moderation(list_moderation):
+        #     # Save media file to Minio
+        #     if media_file:
+        #         media_url = f"{service_preflex}/{media_file.filename}"
+        #         minio_client.put_object(bucket_name, media_url, media_file.file, -1,media_file.content_type, part_size=10*1024*1024)
+        #         request_data["mediaUrl"] = f"{bucket_name}/{media_url}"
+        #
+        #     # Insert comment to MongoDB
+        #     result = await comments_collection.insert_one(request_data)
+        #     return CommentResponse(id=str(result.inserted_id), **request_data)
 
     except HTTPException as http_e:
         raise http_e

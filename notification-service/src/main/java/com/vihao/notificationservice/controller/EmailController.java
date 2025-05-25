@@ -31,4 +31,23 @@ public class EmailController {
     public void consumingPostCreationEvent(PostMessage message) {
         log.info("Message received: {}", message);
     }
+
+    @KafkaListener(topics = "post-topic", groupId = "notification-group")
+    public void checkKafka(PostMessage message) {
+        System.out.println("postId = " + message.getPostId());
+        System.out.println("creatorId = " + message.getCreatorId());
+    }
+
+
+    @KafkaListener(topics = "post-topic", groupId = "notification-group")
+    public void logRawMessage(ConsumerRecord<String, PostMessage> record) {
+        System.out.println("Headers:");
+        record.headers().forEach(h ->
+                System.out.printf("  %s = %s%n", h.key(), new String(h.value()))
+        );
+
+        PostMessage message = record.value();
+        System.out.println("postId = " + message.getPostId());
+        System.out.println("creatorId = " + message.getCreatorId());
+    }
 }

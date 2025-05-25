@@ -1,43 +1,43 @@
 from fastapi import HTTPException
 import json
-from app.Config.openrouter_client import openai_client, moderation_prompt, model_name
-from app.Models.Moderation import Moderation, TypeModeration
+
+from app.Config.google_genai import client, moderation_prompt, model_name
+from google.genai import types
+from app.Models.Moderation import Moderation
 import re
+from starlette.datastructures import UploadFile
 
-def content_moderation(moderation: Moderation):
+async def content_moderation(moderation: Moderation):
     try:
-        content_list = [{
-            "type": "text",
-            "text": moderation.content
-        } if moderation.type == TypeModeration.TEXT else {
-            "type": "image_url",
-            "image_url": {
-                "url": moderation.content,
-            }
-        }]
+        if not moderation.content:
+            raise HTTPException(status_code=400, detail="Content cannot be empty")
 
-        completion = openai_client.chat.completions.create(
-            model=model_name,
-            messages=[
-                {
-                    "role": "system",
-                    "content": moderation_prompt
-                },
-                {
-                    "role": "user",
-                    "content": content_list
-                }
-            ]
+        contents = (
+            moderation.content if isinstance(moderation.content, str)
+            else types.Part.from_bytes(
+                data=await moderation.content.read(),
+                mime_type=moderation.content.content_type
+            ) if isinstance(moderation.content, UploadFile)
+            else None
         )
 
-        if not completion.choices:
+        if contents is None:
+            raise HTTPException(status_code=400, detail="Invalid content type provided")
+
+        response = client.models.generate_content(
+            model=model_name,
+            config=types.GenerateContentConfig(
+                system_instruction=moderation_prompt),
+            contents=contents,
+        )
+
+        if not response.text:
             raise HTTPException(status_code=500, detail="An unexpected error in checking content moderation")
 
-        clean_content = re.sub(r'```json|```', '', completion.choices[0].message.content).strip()
+        # Clean the response text to remove code block formatting
+        clean_content = re.sub(r'```json|```', '', response.text).strip()
 
         result = json.loads(clean_content)
-
-        print(result)
 
         flagged_categories = [key for key,value in result["categories"].items() if value]
 
