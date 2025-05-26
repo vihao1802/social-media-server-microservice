@@ -11,17 +11,19 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UserResponse {
-    String id;
-    String email;
-    String bio;
-    String username;
-    String profileImg;
-    String gender;
-    String DateOfBirth;
-    Boolean isLocked;
-    Boolean isDisabled;
-    Boolean isOnline;
-    String createdAt;
-    int roleId;
-    RoleResponse role;
+    private String id;
+    private String email;
+    private String bio;
+    private String username;
+    private String profileImg;
+    private String gender;
+    private String dateOfBirth;        
+    private Boolean isLocked;
+    private Boolean isEmailVerified;     
+    private Boolean isDisabled;
+    private Boolean isOnline;
+    private Boolean isPrivateAccount;    
+    private String createdAt;
+    private int roleId;
+    private RoleResponse role;
 }
