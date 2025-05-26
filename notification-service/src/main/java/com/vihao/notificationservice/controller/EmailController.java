@@ -1,6 +1,7 @@
 package com.vihao.notificationservice.controller;
 
 import com.fasterxml.jackson.databind.util.JSONPObject;
+import com.vihao.notificationservice.dto.kafka.CommentMessage;
 import com.vihao.notificationservice.dto.kafka.MemberMessage;
 import com.vihao.notificationservice.dto.kafka.PostMessage;
 import com.vihao.notificationservice.service.EmailService;
@@ -32,22 +33,8 @@ public class EmailController {
         log.info("Message received: {}", message);
     }
 
-    @KafkaListener(topics = "post-topic", groupId = "notification-group")
-    public void checkKafka(PostMessage message) {
-        System.out.println("postId = " + message.getPostId());
-        System.out.println("creatorId = " + message.getCreatorId());
-    }
-
-
-    @KafkaListener(topics = "post-topic", groupId = "notification-group")
-    public void logRawMessage(ConsumerRecord<String, PostMessage> record) {
-        System.out.println("Headers:");
-        record.headers().forEach(h ->
-                System.out.printf("  %s = %s%n", h.key(), new String(h.value()))
-        );
-
-        PostMessage message = record.value();
-        System.out.println("postId = " + message.getPostId());
-        System.out.println("creatorId = " + message.getCreatorId());
+    @KafkaListener(topics = "create-comment")
+    public void consumingCommentCreationEvent(CommentMessage message) {
+        log.info("Message received: {}", message);
     }
 }

@@ -3,24 +3,11 @@ import json
 
 from app.Config.google_genai import client, moderation_prompt, model_name
 from google.genai import types
-from app.Models.Moderation import Moderation
 import re
 from starlette.datastructures import UploadFile
 
-async def content_moderation(moderation: Moderation):
+def content_moderation(contents: str | UploadFile | list | None):
     try:
-        if not moderation.content:
-            raise HTTPException(status_code=400, detail="Content cannot be empty")
-
-        contents = (
-            moderation.content if isinstance(moderation.content, str)
-            else types.Part.from_bytes(
-                data=await moderation.content.read(),
-                mime_type=moderation.content.content_type
-            ) if isinstance(moderation.content, UploadFile)
-            else None
-        )
-
         if contents is None:
             raise HTTPException(status_code=400, detail="Invalid content type provided")
 

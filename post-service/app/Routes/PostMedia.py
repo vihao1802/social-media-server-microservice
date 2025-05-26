@@ -35,7 +35,10 @@ async def create(
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
 
-        if media_file and not await content_moderation(Moderation(content=media_file)):
+        if not media_file:
+            raise HTTPException(status_code=400, detail="Media file is required")
+
+        if not await content_moderation(Moderation(content=media_file)):
             # Save media file to Minio
             media_url = f"{service_preflex}/{media_file.filename}"
 
