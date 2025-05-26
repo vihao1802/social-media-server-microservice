@@ -2,7 +2,8 @@ from fastapi import APIRouter, status, HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials
 from httpx import AsyncClient, RequestError
 
-from app.Models.Moderation import Moderation, TypeModeration
+from app.Models.Kafka import PostMessage
+from app.Models.Moderation import Moderation
 from app.Models.Post import PostRequest
 from app.Models.Post import PostResponse
 from app.Database.database import post_collection
@@ -12,7 +13,10 @@ from bson import ObjectId
 
 from app.Services.auth_service import security
 from app.Utils.ContentModeration import content_moderation
-from app.Config.kafka_producer import kafka_producer, header_value
+from app.Config.kafka_producer import kafka_producer
+
+from google import genai
+from google.genai import types
 
 post_router = APIRouter(prefix="/posts", tags=["Posts"])
 
@@ -96,17 +100,15 @@ async def create(post: PostRequest):
         request_data = post.dict()
         request_data["visibility"] = request_data["visibility"].value
 
-        if not content_moderation(Moderation(content=request_data["content"], type=TypeModeration.TEXT)):
+        if not await content_moderation(Moderation(content=request_data["content"])):
             result = await post_collection.insert_one(request_data)
-
-            # headers = [("spring_json_header_types",header_value)]
-            #
-            # await kafka_producer.send("create-post", {
-            #     "postId": "67ac6b834da5c4bc9c128fe5",
-            #     "creatorId": request_data["creatorId"],
-            # }, headers)
-
-            return PostResponse(id="67ac6b834da5c4bc9c128fe5", **request_data)
+            post_message = PostMessage(postId=str(result.inserted_id), creatorId=request_data["creatorId"])
+            await kafka_producer.send(
+                topic="create-post",
+                message=post_message.dict(),
+                headers=[("__TypeId__", b"post-message")]
+            )
+            return PostResponse(id=str(result.inserted_id), **request_data)
     except HTTPException as http_e:
         raise http_e
 
