@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   HttpException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -12,6 +13,7 @@ import { RelationshipStatus, RelationshipType } from './enum/relationship.enum';
 import { User } from './types/user';
 import { firstValueFrom } from 'rxjs';
 import { PaginationDto } from './dto/pagination.dto';
+import { ClientKafka } from '@nestjs/microservices';
 
 @Injectable()
 export class RelationshipService {
@@ -20,6 +22,8 @@ export class RelationshipService {
   constructor(
     private readonly databaseClient: DatabaseCLient,
     private readonly httpService: HttpService,
+    @Inject('NOTIFICATION_SERVICE')
+    private readonly notiService: ClientKafka,
   ) {}
   async GetUserFollowingList(
     authorizedUser: User,
@@ -161,13 +165,13 @@ export class RelationshipService {
 
       if (relationship) {
         if (relationship.Status === 'accepted') {
-          throw new Error('Already following');
+          throw new BadRequestException('Already following');
         }
         if (relationship.Status === 'pending') {
-          throw new Error('Request wait for acceptance');
+          throw new BadRequestException('Request are pending');
         }
         if (relationship.Type === RelationshipType.BLOCK) {
-          throw new Error('You are blocked');
+          throw new BadRequestException('You are blocked');
         }
       }
       // check if receiver followed sender or not
@@ -181,14 +185,6 @@ export class RelationshipService {
           relationship_receiver.Type === RelationshipType.FOLLOW &&
           relationship_receiver.Status === 'accepted') ||
         !user.isPrivateAccount;
-      console.log({
-        ReceiverId: receiverId,
-        Status: approval
-          ? RelationshipStatus.ACCEPTED
-          : RelationshipStatus.PENDING,
-        Type: RelationshipType.FOLLOW,
-        SenderId: authorizedUser.id,
-      });
 
       await this.databaseClient.relationship.create({
         data: {
@@ -200,9 +196,29 @@ export class RelationshipService {
           SenderId: authorizedUser.id,
         },
       });
+
+      this.logger.log({
+        ReceiverId: receiverId,
+        Status: approval
+          ? RelationshipStatus.ACCEPTED
+          : RelationshipStatus.PENDING,
+        Type: RelationshipType.FOLLOW,
+        SenderId: authorizedUser.id,
+      });
+
+      this.notiService.emit('relationship-notification', {
+        value: {
+          senderId: authorizedUser.id,
+          receiverId: receiverId,
+          relation: 'follow',
+        },
+        headers: {
+          __TypeId__: 'RelationshipMessage',
+        },
+      });
     } catch (error: any) {
       this.logger.error(error.message);
-      throw new HttpException(error.message, error.status);
+      throw error;
     }
   }
 
@@ -223,6 +239,17 @@ export class RelationshipService {
       await this.databaseClient.relationship.delete({
         where: {
           Id: relationship.Id,
+        },
+      });
+
+      this.notiService.emit('relationship-notification', {
+        value: {
+          senderId: authorizedUser.id,
+          receiverId: receiverId,
+          relation: 'unfollow',
+        },
+        headers: {
+          __TypeId__: 'RelationshipMessage',
         },
       });
     } catch (error) {
@@ -252,6 +279,17 @@ export class RelationshipService {
           Status: RelationshipStatus.ACCEPTED,
         },
       });
+
+      this.notiService.emit('relationship-notification', {
+        value: {
+          senderId: senderId,
+          receiverId: authorizedUser.id,
+          relation: 'accept',
+        },
+        headers: {
+          __TypeId__: 'RelationshipMessage',
+        },
+      });
     } catch (error) {
       this.logger.error(error.message);
       throw new BadRequestException(error.message);
@@ -272,6 +310,17 @@ export class RelationshipService {
       await this.databaseClient.relationship.delete({
         where: {
           Id: relationship.Id,
+        },
+      });
+
+      this.notiService.emit('relationship-notification', {
+        value: {
+          senderId: senderId,
+          receiverId: authorizedUser.id,
+          relation: 'reject',
+        },
+        headers: {
+          __TypeId__: 'RelationshipMessage',
         },
       });
     } catch (error) {
@@ -346,6 +395,17 @@ export class RelationshipService {
               Status: RelationshipStatus.ACCEPTED,
             },
           });
+
+          this.notiService.emit('relationship-notification', {
+            value: {
+              senderId: authorizedUser.id,
+              receiverId: receiverId,
+              relation: 'block',
+            },
+            headers: {
+              __TypeId__: 'RelationshipMessage',
+            },
+          });
           return;
         }
       }
@@ -355,6 +415,17 @@ export class RelationshipService {
           ReceiverId: receiverId,
           Type: RelationshipType.BLOCK,
           Status: RelationshipStatus.ACCEPTED,
+        },
+      });
+
+      this.notiService.emit('relationship-notification', {
+        value: {
+          senderId: authorizedUser.id,
+          receiverId: receiverId,
+          relation: 'block',
+        },
+        headers: {
+          __TypeId__: 'RelationshipMessage',
         },
       });
     } catch (error) {
@@ -380,6 +451,17 @@ export class RelationshipService {
           });
         }
       }
+
+      this.notiService.emit('relationship-notification', {
+        value: {
+          senderId: authorizedUser.id,
+          receiverId: receiverId,
+          relation: 'unblock',
+        },
+        headers: {
+          __TypeId__: 'RelationshipMessage',
+        },
+      });
     } catch (error) {
       this.logger.error(error.message);
       throw new BadRequestException(error.message);
@@ -493,12 +575,11 @@ export class RelationshipService {
         }),
       );
 
-      if (!res.data[0]) throw new Error('User not found');
+      if (!res.data) throw new BadRequestException('User not found');
 
-      return res.data[0];
+      return res.data;
     } catch (error) {
-      this.logger.error(error.message);
-      throw new BadRequestException(error.message);
+      throw error;
     }
   }
 }

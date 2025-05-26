@@ -36,16 +36,16 @@ export class AuthController {
   ) {}
 
   @UseGuards(LocalAuthGuard)
+  @HttpCode(200)
   @Post('sign-in')
   async SignIn(@Request() req) {
     const token = await this._authService.signIn(req.user);
     return {
-      status: 201,
+      status: 200,
       data: {
         email: req.user.email,
         ...token,
       },
-
       message: 'Sign in successfully',
     };
   }
