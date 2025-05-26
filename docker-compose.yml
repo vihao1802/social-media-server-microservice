@@ -200,6 +200,9 @@ services:
     volumes:
       - ./notification-service:/app
       - ~/.m2:/root/.m2 # cache dependencies
+    env_file:
+      - ./.env.global
+      - ./notification-service/.env
     depends_on:
       - kafka
       - notification-service-db
