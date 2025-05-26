@@ -11,6 +11,7 @@ import { HttpAdapterHost } from '@nestjs/core';
 import { UnauthorizedException } from './unauthorized.exception';
 import { InternalServerException } from './internal-server.exception';
 import { ZodError } from 'zod';
+
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   constructor(private readonly httpAdapterHost: HttpAdapterHost) {}

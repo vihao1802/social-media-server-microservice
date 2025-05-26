@@ -13,6 +13,7 @@ import {
   UseInterceptors,
   UploadedFile,
   HttpStatus,
+  Inject,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { Express } from 'express';
@@ -27,7 +28,6 @@ import { PaginationDto, paginationSchema } from './dto/pagination.dto';
 import { Roles } from 'src/auth/decorator/role.decorator';
 import { ROLE } from 'src/auth/enum/role.constant';
 import { RolesGuard } from 'src/auth/guards/roles/roles.guard';
-import { MinioService } from 'src/database/minio.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiResponse } from './dto/response/api-response.dto';
 import { FileSizeValidationPipe } from './pipes/fileValidationPipe';
@@ -35,10 +35,7 @@ import { FileSizeValidationPipe } from './pipes/fileValidationPipe';
 @UseGuards(JwtAuthGuard)
 @Controller('user')
 export class UserController {
-  constructor(
-    private readonly userService: UserService,
-    private readonly minioService: MinioService,
-  ) {}
+  constructor(private readonly userService: UserService) {}
 
   @Get()
   @Roles([ROLE.USER])
@@ -68,10 +65,9 @@ export class UserController {
   @Patch('update/avatar')
   @UseInterceptors(FileInterceptor('file123'))
   updateAvatar(
-    @UploadedFile( new FileSizeValidationPipe() ) file: Express.Multer.File,
+    @UploadedFile(new FileSizeValidationPipe()) file: Express.Multer.File,
     @Request() req,
   ) {
-    
     const avatarUrl = this.userService.updateAvatar(file, req.user.sub);
 
     return new ApiResponse(

@@ -72,7 +72,6 @@ export class RelationshipController {
 
   @Post('follow/:userId')
   async FollowUser(@Request() req, @Param('userId') userId: string) {
-    console.log('userId', userId);
 
     await this.relationshipService.FollowUser(req.user, userId);
     return new ApiResponse(HttpStatus.OK, 'Followed successfully');

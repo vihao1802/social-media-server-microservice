@@ -42,7 +42,7 @@ services:
     image: chat-service:latest
     container_name: "chat-service-container"
     working_dir: /app
-    command: sh run.sh
+    command: bash run.sh
     ports:
       - "8101:8101"
     volumes:
@@ -69,6 +69,7 @@ services:
       - "8103:8103"
     depends_on:
       - minio-storage
+      - kafka
     networks:
       - user-network
       - shared-network
@@ -86,6 +87,8 @@ services:
     container_name: "relationship-service-container"
     ports:
       - "8105:8105"
+    depends_on:
+      - kafka
     networks:
       - user-network
       - shared-network
@@ -197,6 +200,9 @@ services:
     volumes:
       - ./notification-service:/app
       - ~/.m2:/root/.m2 # cache dependencies
+    env_file:
+      - ./.env.global
+      - ./notification-service/.env
     depends_on:
       - kafka
       - notification-service-db

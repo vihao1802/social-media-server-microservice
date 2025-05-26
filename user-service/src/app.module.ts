@@ -1,10 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AuthController } from './auth/auth.controller';
-import { AuthService } from './auth/auth.service';
-import { UserController } from './user/user.controller';
-import { UserService } from './user/user.service';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
@@ -12,7 +8,6 @@ import { GlobalExceptionFilter } from './exception-handler/exception-handler.fil
 import { APP_FILTER } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { RoleModule } from './role/role.module';
-import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -24,7 +19,6 @@ import { MailModule } from './mail/mail.module';
       expandVariables: true,
     }),
     RoleModule,
-    MailModule,
   ],
   controllers: [AppController],
   providers: [

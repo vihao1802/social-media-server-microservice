@@ -20,8 +20,10 @@ import refreshJwtConfig from './config/refresh-jwt.config';
 import { ConfigType } from '@nestjs/config';
 import { create } from 'domain';
 import * as bcrypt from 'bcrypt';
-import { MailService } from 'src/mail/mail.service';
 import { generateRandomNumber } from 'src/utils/generator.util';
+import { ClientKafka } from '@nestjs/microservices';
+import { generateVerifyEmailHtml } from 'src/templates/verify-mail-template';
+import { generateOtpEmailHtml } from 'src/templates/otp-template';
 
 @Injectable()
 export class AuthService {
@@ -29,9 +31,10 @@ export class AuthService {
     private readonly databaseService: DatabaseService,
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
-    private readonly mailService: MailService,
     @Inject(refreshJwtConfig.KEY)
     private readonly refreshTokenConfig: ConfigType<typeof refreshJwtConfig>,
+    @Inject('NOTIFICATION_SERVICE')
+    private readonly notiService: ClientKafka,
   ) {}
 
   async verifyUser(signInRequest: SignInRequest) {
@@ -68,7 +71,7 @@ export class AuthService {
     }
   }
 
-  async sendConfirmEmail(email: string) {
+  async sendVerifyEmail(email: string) {
     const usr = await this.userService.findByEmail(email);
 
     if (!usr)
@@ -81,16 +84,18 @@ export class AuthService {
 
     const { access_token } = await this.createToken(usr, false);
 
-    const subject = 'Confirm email';
+    const url = `${process.env.API_GATEWAY_DOMAIN}/auth/confirm-email?token=${access_token}`;
 
-    const url = `${process.env.SERVER_DOMAIN}/auth/confirm-email?token=${access_token}`;
-
-    return await this.mailService.sendVerifyEmailMail(
-      email,
-      subject,
-      url,
-      usr.username,
-    );
+    this.notiService.emit('verify-email', {
+      value: {
+        email: email,
+        message: generateVerifyEmailHtml(usr.username, url),
+        subject: 'Verify Email',
+      },
+      headers: {
+        __TypeId__: 'VerifyMessage',
+      },
+    });
   }
 
   async confirmEmail(token: string) {
@@ -111,7 +116,9 @@ export class AuthService {
     const usr = await this.userService.findByEmail(email);
 
     if (!usr)
-      throw new BadRequestException(ErrorCodes.BadRequestCode.USER_NOT_FOUND);
+      throw new BadRequestException(
+        ErrorCodes.BadRequestCode.RESOURCE_NOT_FOUND,
+      );
 
     if (!usr.isEmailVerified)
       throw new BadRequestException(
@@ -121,12 +128,16 @@ export class AuthService {
     try {
       const opt_code = generateRandomNumber().toString();
 
-      await this.mailService.sendOTP(
-        email,
-        'Forgot password',
-        opt_code,
-        usr.username,
-      );
+      this.notiService.emit('get-otp', {
+        value: {
+          email: email,
+          message: generateOtpEmailHtml(usr.username, opt_code),
+          subject: 'Forgot Password',
+        },
+        headers: {
+          __TypeId__: 'OTPMessage',
+        },
+      });
 
       const opt_code_encrypted = await this.userService.hashedData(opt_code);
 
@@ -136,6 +147,7 @@ export class AuthService {
           userId: usr.id,
         },
       });
+      return;
     } catch (error: any) {
       console.error(error);
       throw new InternalServerErrorException(
@@ -151,6 +163,9 @@ export class AuthService {
           email,
         },
       },
+      orderBy: {
+        createdAt: 'desc',
+      },
       include: {
         user: true,
       },
@@ -162,8 +177,9 @@ export class AuthService {
     if (
       otpData.createdAt.getTime() + parseInt(process.env.OTP_EXPIRES_IN) <
       Date.now()
-    )
+    ) {
       throw new BadRequestException(ErrorCodes.BadRequestCode.OTP_EXPIRED);
+    }
 
     const isValid = await bcrypt.compare(otp, otpData.otp);
 

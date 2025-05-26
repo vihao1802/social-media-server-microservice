@@ -2,6 +2,11 @@ import { HttpStatus } from '@nestjs/common';
 import { IErrorCode } from './exception.interface';
 
 const BadRequestCode: Record<string, IErrorCode> = {
+  RESOURCE_NOT_FOUND: {
+    message: 'Resource not found',
+    code: 2002,
+    httpStatus: HttpStatus.UNAUTHORIZED,
+  },
   USER_ALREADY_EXISTS: {
     message: 'User already exist',
     code: 1001,

@@ -15,8 +15,7 @@ import googleOauthConfig from './config/google-oauth.config';
 import { GoogleStrategy } from './strategies/google.strategy';
 import facebookOauthConfig from './config/facebook-oauth.config';
 import { FacebookStrategy } from './strategies/facebook.strategy';
-import { MailModule } from 'src/mail/mail.module';
-import { MailService } from 'src/mail/mail.service';
+import { ClientsModule, Transport } from '@nestjs/microservices';
 
 @Module({
   imports: [
@@ -25,12 +24,26 @@ import { MailService } from 'src/mail/mail.service';
     ConfigModule.forFeature(refreshJwtConfig),
     ConfigModule.forFeature(googleOauthConfig),
     ConfigModule.forFeature(facebookOauthConfig),
+    ClientsModule.register([
+      {
+        name: 'NOTIFICATION_SERVICE',
+        transport: Transport.KAFKA,
+        options: {
+          client: {
+            clientId: 'notification',
+            brokers: ['kafka:9092'],
+          },
+          consumer: {
+            groupId: 'notification-group',
+          },
+        },
+      },
+    ]),
   ],
   controllers: [AuthController],
   providers: [
     AuthService,
     UserService,
-    MailService,
     JwtStrategy,
     RefreshJwtStrategy,
     LocalStrategy,

@@ -5,7 +5,7 @@ export const resetPasswordSchema = z
     resetToken: z.string(),
     newPassword: z
       .string()
-      .min(8)
+      .min(6)
       .max(4096)
       .regex(
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/gm,
