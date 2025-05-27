@@ -47,7 +47,7 @@ services:
       - "8101:8101"
     volumes:
       - ./chat-service:/app
-      - ~/.m2:/root/.m2 # cache dependencies
+      - ./chat-service/.m2:/root/.m2 # cache dependencies
     depends_on:
       - minio-storage
       - kafka
@@ -199,7 +199,7 @@ services:
       - "8106:8106"
     volumes:
       - ./notification-service:/app
-      - ~/.m2:/root/.m2 # cache dependencies
+      - ./notification-service/.m2:/root/.m2 # cache dependencies
     env_file:
       - ./.env.global
       - ./notification-service/.env
