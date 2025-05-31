@@ -13,9 +13,9 @@ class Post(BaseModel):
     content: str
     visibility: PostVisibility
     createdAt: Optional[datetime] = datetime.now()
-    isStory: bool
+    isStory: bool = False
     creatorId: str
-    isDelete: bool
+    isDelete: bool = False
 
 class PostRequest(Post):
     pass

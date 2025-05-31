@@ -31,6 +31,11 @@ public class EmailController {
         log.info("Message received: {}", message);
     }
 
+    @KafkaListener(topics = "create-comment")
+    public void consumingCommentCreationEvent(CommentMessage message) {
+        log.info("Message received: {}", message);
+    }
+
     @KafkaListener(topics = "get-otp")
     public void consumingGetOTPEvent(OTPMessage message) {
         log.info("Message received: {}", message);

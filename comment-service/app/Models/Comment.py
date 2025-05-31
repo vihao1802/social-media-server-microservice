@@ -1,8 +1,6 @@
-from fastapi import UploadFile, File
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional, Annotated
-from enum import Enum
+from typing import Optional
 
 class Comment(BaseModel):
     postId: str
@@ -31,12 +29,3 @@ class CommentUpdate(BaseModel):
     content: Optional[str]
     isDelete: Optional[bool] = False
     isEdited: Optional[bool] = False
-
-
-class TypeModeration(Enum):
-    TEXT = "text"
-    IMAGE_URL = "image_url"
-
-class CommentModeration(BaseModel):
-    content: str
-    type: TypeModeration
