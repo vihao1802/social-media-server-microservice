@@ -13,9 +13,47 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id               String         @id @default(cuid())
+  email            String         @unique
+  hashedPassword   String
+  bio              String?        @db.VarChar(255)
+  username         String         @db.VarChar(255)
+  profileImg       String?
+  gender           String         @default("Male")
+  DateOfBirth      DateTime
+  isLocked         Boolean        @default(false)
+  isEmailVerified  Boolean        @default(false)
+  isDisabled       Boolean        @default(false)
+  isOnline         Boolean        @default(false)
+  isPrivateAccount Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  role             Role           @relation(fields: [roleId], references: [id])
+  roleId           Int
+  UserOTP          UserOTP[]
+  Follower         Relationship[] @relation("relation_user_sender")
+  Following        Relationship[] @relation("relation_user_receiver")
+}
+
+model UserOTP {
+  id        Int      @id @default(autoincrement())
+  otp       String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime @default(now())
+}
+
+model Role {
+  id       Int    @id @default(autoincrement())
+  roleName String @unique
+  users    User[]
+}
+
 model Relationship {
   Id         String   @id @default(cuid())
+  Sender     User     @relation(name: "relation_user_sender", fields: [SenderId], references: [id])
   SenderId   String
+  Receiver   User     @relation(name: "relation_user_receiver", fields: [ReceiverId], references: [id])
   ReceiverId String
   Status     String   @default("pending")
   Type       String   @default("follow")
