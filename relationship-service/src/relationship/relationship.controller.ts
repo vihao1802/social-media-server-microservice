@@ -7,6 +7,7 @@ import {
   Query,
   Req,
   Request,
+  UseFilters,
   UseGuards,
   UsePipes,
 } from '@nestjs/common';
@@ -16,8 +17,10 @@ import { ApiResponse } from './dto/api-response.dto';
 import { RelationshipStatus } from './enum/relationship.enum';
 import { PaginationDto, PaginationSchema } from './dto/pagination.dto';
 import { zodValidationPipe } from './pipes/zodValidationPipe';
+import { ZodExceptionFilter } from './exception/zod-exception.filter';
 
 @UseGuards(AuthGuard)
+@UseFilters(ZodExceptionFilter)
 @Controller('relationship')
 export class RelationshipController {
   constructor(private readonly relationshipService: RelationshipService) {}
@@ -48,15 +51,18 @@ export class RelationshipController {
   }
 
   @Get('me/follower')
+  @UsePipes(new zodValidationPipe(PaginationSchema))
+  @UsePipes(new zodValidationPipe(PaginationSchema))
   async GetMyFollower(@Request() req, @Query() paginationDto: PaginationDto) {
     const result = await this.relationshipService.GetUserFollowerList(
-      req,
+      req.user,
       paginationDto,
     );
     return new ApiResponse(HttpStatus.OK, result);
   }
 
   @Get(':userId/follower')
+  @UsePipes(new zodValidationPipe(PaginationSchema))
   async GetUserFollower(
     @Request() req,
     @Param('userId') userId: string,
@@ -72,7 +78,6 @@ export class RelationshipController {
 
   @Post('follow/:userId')
   async FollowUser(@Request() req, @Param('userId') userId: string) {
-
     await this.relationshipService.FollowUser(req.user, userId);
     return new ApiResponse(HttpStatus.OK, 'Followed successfully');
   }
@@ -119,6 +124,7 @@ export class RelationshipController {
     return await this.relationshipService.UnblockerUser(req.user, userId);
   }
   @Get('me/recommendation')
+  @UsePipes(new zodValidationPipe(PaginationSchema))
   async GetRecommendation(
     @Request() req,
     @Query() paginationDto: PaginationDto,
