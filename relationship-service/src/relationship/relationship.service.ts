@@ -542,30 +542,35 @@ export class RelationshipService {
         take,
         by: ['ReceiverId'],
         where: {
-          SenderId: { in: friendIds }, // SenderId là bạn bè của userId
-          ReceiverId: { not: userId }, // Loại bỏ userId khỏi danh sách đề xuất
+          SenderId: { in: friendIds },
+          AND: [
+            { ReceiverId: { notIn: friendIds } },
+            { ReceiverId: { not: userId } },
+          ],
           Type: RelationshipType.FOLLOW,
           Status: RelationshipStatus.ACCEPTED,
         },
         _count: {
-          SenderId: true, // Đếm số lần xuất hiện của ReceiverId
+          SenderId: true,
         },
         orderBy: {
           _count: {
-            SenderId: 'desc', // Sắp xếp theo số lượng follow chung giảm dần
+            SenderId: 'desc',
           },
         },
       }),
       this.databaseClient.relationship.count({
         where: {
-          SenderId: { in: friendIds }, // SenderId là bạn bè của userId
-          ReceiverId: { not: userId }, // Loại bỏ userId khỏi danh sách đề xuất
+          SenderId: { in: friendIds },
+          AND: [
+            { ReceiverId: { notIn: friendIds } },
+            { ReceiverId: { not: userId } },
+          ],
           Type: RelationshipType.FOLLOW,
           Status: RelationshipStatus.ACCEPTED,
         },
       }),
     ]);
-    console.log('mutuals', mutuals);
 
     const [mostFollower, totalMostFollower] = await Promise.all([
       this.databaseClient.relationship.groupBy({
@@ -573,7 +578,11 @@ export class RelationshipService {
         take,
         by: ['ReceiverId'],
         where: {
-          ReceiverId: { not: userId },
+          SenderId: { not: userId },
+          AND: [
+            { ReceiverId: { notIn: friendIds } },
+            { ReceiverId: { not: userId } },
+          ],
           Type: RelationshipType.FOLLOW,
           Status: RelationshipStatus.ACCEPTED,
         },
@@ -595,8 +604,6 @@ export class RelationshipService {
         },
       }),
     ]);
-
-    console.log('mostFollower', mostFollower);
 
     // merge array
     const merged = [...mostFollower, ...mutuals];
