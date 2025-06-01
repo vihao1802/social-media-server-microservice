@@ -1,4 +1,4 @@
-<h1 align="center">Social Media Service</h1>
+<h1 align="center">Ninstaram Social Media Server</h1>
 <p align="center">
   <a href="https://github.com/vihao1802/Social-Media-Client/blob/main/LICENSE">
     <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-yellow.svg" target="_blank" />
@@ -70,9 +70,8 @@
 | Technology                    | Description                                                                         |
 | ----------------------------- | ----------------------------------------------------------------------------------- |
 | **Microservice Architecture** | Design pattern that separates applications into maintainable and testable services. |
-| **EC2**                       | Scalable cloud computing service by AWS for running virtual servers. (For deploy server)                |
-| **Vercel**                    | Platform for deploying and hosting modern web applications with ease. (For deploy client)              |
-| **GitHub Actions**            | CI/CD tool for automating workflows, builds, and deployments directly from GitHub.  |
+| **EC2**                       | Scalable cloud computing service by AWS for running virtual servers. (For deploying server)                |
+| **Vercel**                    | Platform for deploying and hosting modern web applications with ease. (For deploying client)              |
 
 ### APIs
 
@@ -141,9 +140,9 @@ CLOUDINARY_API_SECRET=
 ```bash
 cd social-media-server-microservice
 ```
-2. Setup `.env` file in every service like `.env.example` file.
+2. Setup `.env` file in every service base on `.env.example` file.
 
-2. Build and run all services container setup in `docker-compose.yml` file.
+2. Build and run all service containers that have been set up in `docker-compose.yml` file with the command
 
 ```bash
 docker compose up --build -d
