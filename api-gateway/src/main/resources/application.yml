@@ -10,13 +10,18 @@ spring:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
       globalcors:
         cors-configurations:
-          '[/**]':
+          "[/**]":
             allowed-origins: "http://localhost:3000"
             allowed-methods: "*"
             allowed-headers: "*"
             allow-credentials: true
 
       routes:
+        - id: chat-ws
+          uri: ${CHAT_SERVICE_URL}
+          predicates:
+            - Path=/ws/**
+
         - id: chat-service
           uri: ${CHAT_SERVICE_URL}
           predicates:

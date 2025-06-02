@@ -4,7 +4,6 @@ import com.vihao.chat_service.client.UserServiceClient;
 import com.vihao.chat_service.dto.request.MessageRequest;
 import com.vihao.chat_service.dto.response.MessagePageResponse;
 import com.vihao.chat_service.dto.response.MessageResponse;
-import com.vihao.chat_service.dto.response.MessageWebsocketResponse;
 import com.vihao.chat_service.dto.response.UserResponse;
 import com.vihao.chat_service.entity.Chat;
 import com.vihao.chat_service.entity.Message;
