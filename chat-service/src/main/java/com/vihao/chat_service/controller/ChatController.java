@@ -3,13 +3,14 @@ package com.vihao.chat_service.controller;
 import com.vihao.chat_service.dto.request.ChatMemberCreationRequest;
 import com.vihao.chat_service.dto.request.ChatRequest;
 import com.vihao.chat_service.dto.request.MessageRequest;
+import com.vihao.chat_service.dto.request.OnlineUserRequest;
 import com.vihao.chat_service.dto.response.ChatAndMemberResponse;
 import com.vihao.chat_service.dto.response.ChatMemberResponse;
 import com.vihao.chat_service.dto.response.ChatResponse;
-import com.vihao.chat_service.dto.response.MessageResponse;
-import com.vihao.chat_service.entity.MessageWebsocket;
 import com.vihao.chat_service.service.ChatMemberService;
 import com.vihao.chat_service.service.ChatService;
+import com.vihao.chat_service.service.WebSocketSessionTracker;
+
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -19,7 +20,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,6 +33,7 @@ public class ChatController {
     ChatService chatService;
     ChatMemberService chatMemberService;
     SimpMessagingTemplate simpMessagingTemplate;
+    WebSocketSessionTracker sessionTracker;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -79,7 +80,15 @@ public class ChatController {
         String chatId = messageWebsocket.getChatId();
         // Handle the incoming message
         simpMessagingTemplate.convertAndSend("/topic/chat/" + chatId,messageWebsocket);
-        System.out.println("Received message: " + messageWebsocket);
     }
 
+    @MessageMapping("/update-online-users")
+    public void sendOnlineUsers(
+        @Payload OnlineUserRequest request
+    ) {
+        String userId = request.getUserId();
+        sessionTracker.addUser(userId);
+        System.out.println("Online users: " + sessionTracker.getOnlineUsers());
+        simpMessagingTemplate.convertAndSend("/topic/online-users", sessionTracker.getOnlineUsers());
+    }
 }
