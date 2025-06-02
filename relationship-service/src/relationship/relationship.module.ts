@@ -15,7 +15,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
         options: {
           client: {
             clientId: 'notification',
-            brokers: ['kafka:9092'],
+            brokers: ['localhost:9094'],
           },
           consumer: {
             groupId: 'notification-group',
