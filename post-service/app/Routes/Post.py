@@ -1,12 +1,15 @@
-from fastapi import APIRouter, status, HTTPException, Security
+import this
+
+from fastapi import APIRouter, status, HTTPException, Security, Request
 from fastapi.security import HTTPAuthorizationCredentials
 from httpx import AsyncClient, RequestError
 
+from app.Config.config import API_GATEWAY_URL
 from app.Models.Kafka import PostMessage
 from app.Models.Moderation import Moderation
 from app.Models.Post import PostRequest
 from app.Models.Post import PostResponse
-from app.Database.database import post_collection
+from app.Database.database import post_collection, postViewer_collection
 from fastapi_pagination import Page
 from fastapi_pagination.ext.motor import paginate
 from bson import ObjectId
@@ -20,10 +23,57 @@ from google.genai import types
 
 post_router = APIRouter(prefix="/posts", tags=["Posts"])
 
+async def handle_post_response(documents, token: str, current_user_id: str):
+    async with AsyncClient() as client:
+        results = []
+
+        for document in documents:
+            document["id"] = str(document["_id"])
+            document.pop("_id")
+
+            document["liked"] = await postViewer_collection.find_one({
+                "postId": document["id"],
+                "userId": current_user_id,
+                "liked": True
+            }) is not None
+
+            document["likeCount"] = await postViewer_collection.count_documents(
+                {"postId": document["id"], "liked": True}
+            )
+
+            creator_info = None
+            creator_id = document.get("creatorId")
+            if creator_id:
+                try:
+                    response = await client.get(
+                        f"{API_GATEWAY_URL}/user/{creator_id}",
+                        headers={"Authorization": f"Bearer {token}"}
+                    )
+                    if response.status_code == 200:
+                        creator_info = response.json()
+
+                        creator_info = {
+                            "id": creator_info.get("id"),
+                            "username": creator_info.get("username"),
+                            "profileImg": creator_info.get("profileImg"),
+                        }
+                    else:
+                        print(f"Failed to fetch creator info for {creator_id}: {response.status_code}")
+                except RequestError as e:
+                    print(f"Error fetching creator info for {creator_id}: {e}")
+
+            document["creator"] = creator_info
+            results.append(PostResponse(**document))
+
+        return results
+
 @post_router.get("", status_code=status.HTTP_200_OK, response_model=Page[PostResponse])
-async def get():
+async def get(request: Request):
     try:
-        return await paginate(post_collection, transformer=PostResponse.from_mongo)
+        async def transformer_wrapper(items):
+            return await handle_post_response(items, token=request.state.token, current_user_id=request.state.user.get("id"))
+
+        return await paginate(post_collection, transformer=transformer_wrapper)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

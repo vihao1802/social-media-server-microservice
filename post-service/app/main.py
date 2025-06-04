@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Depends
+from starlette.middleware import Middleware
 
 from app.Config.kafka_producer import kafka_producer
+from app.Middlewares.auth_middleware import AuthMiddleware
 from app.Routes.Post import post_router
 from app.Routes.PostMedia import postMedia_router
 from app.Routes.PostViewer import postViewer_router
@@ -12,7 +14,8 @@ app = FastAPI(
     title="Post Service",
     description="This is a microservice social media network for posting",
     version="1.0.0",
-    dependencies=[Depends(verify_token)],
+    # dependencies=[Depends(verify_token)],
+    middleware=[Middleware(AuthMiddleware)]
 )
 
 # Register routes
