@@ -4,18 +4,26 @@ import {
   CanActivate,
   ExecutionContext,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { firstValueFrom, Observable } from 'rxjs';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly httpService: HttpService) {}
+  private readonly logger: Logger;
+  constructor(private readonly httpService: HttpService) {
+    this.logger = new Logger(AuthGuard.name);
+  }
   async canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest();
     const BearerToken = request.headers['authorization'];
 
     if (!BearerToken) {
+      this.logger.error(
+        `400: { request_url: ${request.url}, message: 'authorized' }`,
+      );
       throw new UnauthorizedException('Unauthorized');
     }
     try {

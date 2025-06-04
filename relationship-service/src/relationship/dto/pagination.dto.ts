@@ -1,17 +1,17 @@
-import { z } from 'zod';
+import { optional, z } from 'zod';
 
 export const PaginationSchema = z.object({
   page: z
-    .string()
-    .transform((val) => parseInt(val, 10)) // Chuyển đổi kiểu dữ liệu
-    .refine((val) => val > 0, { message: 'Page must be a positive number' }), // Kiểm tra số dương
-
+    .preprocess((val) => parseInt(val as string, 10), z.number())
+    .default(1)
+    .refine((val) => val > 0, { message: 'Page must be a positive number' }),
   pageSize: z
-    .string()
-    .transform((val) => parseInt(val, 10))
+    .preprocess((val) => parseInt(val as string, 10), z.number())
+    .default(5)
     .refine((val) => val > 0, {
       message: 'PageSize must be a positive number',
     }),
+
   orderBy: z.string().optional(),
   sort: z.string().optional(),
 });
