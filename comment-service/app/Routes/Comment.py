@@ -1,22 +1,83 @@
 from datetime import datetime
 from typing import Optional, Annotated
 from bson import ObjectId
-from fastapi import APIRouter, status, UploadFile, File, HTTPException
+from fastapi import APIRouter, status, UploadFile, File, HTTPException, Request
 from fastapi_pagination import Page
 from fastapi_pagination.ext.motor import paginate
+from httpx import AsyncClient, RequestError
 
+from app.Config.config import API_GATEWAY_URL
 from app.Config.kafka_producer import kafka_producer
 from app.Config.minio_client import service_preflex, bucket_name, minio_client
-from app.Database.database import comments_collection
+from app.Database.database import comments_collection, comment_reaction_collection
 from app.Models.Comment import CommentResponse, CommentUpdate
 from app.Utils.ContentModeration import content_moderation
 from google.genai import types
 
 comment_router = APIRouter(prefix="/comments", tags=["Comments"])
 
-@comment_router.get("/{post_id}", status_code=status.HTTP_200_OK, response_model=Page[CommentResponse])
-async def get(post_id: str):
-    return await paginate(comments_collection,{"postId": post_id}, transformer=CommentResponse.from_mongo)
+async def handle_comment_response(documents, token: str, current_user_id: str):
+    async with AsyncClient() as client:
+        results = []
+
+        for document in documents:
+            document["id"] = str(document["_id"])
+            document.pop("_id")
+
+            user_info = None
+            user_id = document.get("userId")
+            if user_id:
+                try:
+                    response = await client.get(
+                        f"{API_GATEWAY_URL}/user/{user_id}",
+                        headers={"Authorization": f"Bearer {token}"}
+                    )
+                    if response.status_code == 200:
+                        user_info = response.json()
+
+                        user_info = {
+                            "id": user_info.get("id"),
+                            "username": user_info.get("username"),
+                            "profileImg": user_info.get("profileImg"),
+                        }
+                    else:
+                        print(f"Failed to fetch user info for {user_id}: {response.status_code}")
+                except RequestError as e:
+                    print(f"Error fetching user info for {user_id}: {e}")
+
+            document["user"] = user_info
+            document["childCount"] = await comments_collection.count_documents(
+                {"replyTo": document["id"]}
+            )
+            print(current_user_id, document["id"])
+            document["liked"] = await comment_reaction_collection.find_one({"userId": current_user_id, "commentId": document["id"]}) is not None
+            document["likeCount"] = await comment_reaction_collection.count_documents(
+                {"commentId": document["id"]}
+            )
+
+            results.append(CommentResponse(**document))
+
+        return results
+
+@comment_router.get("/post/{post_id}", status_code=status.HTTP_200_OK, response_model=Page[CommentResponse])
+async def get_root_comments(post_id: str, request: Request):
+    try:
+        async def transformer_wrapper(items):
+            return await handle_comment_response(items, token=request.state.token, current_user_id=request.state.user.get("id"))
+
+        return await paginate(comments_collection, {"postId": post_id, "replyTo": None}, sort=("createdAt",-1), transformer=transformer_wrapper)
+    except Exception as e:
+        raise (HTTPException(status_code=500, detail=str(e)))
+
+@comment_router.get("/{comment_id}/replies", status_code=status.HTTP_200_OK, response_model=Page[CommentResponse])
+async def get_reply_comments(comment_id: str, request: Request):
+    try:
+        async def transformer_wrapper(items):
+            return await handle_comment_response(items, token=request.state.token, current_user_id=request.state.user.get("id"))
+
+        return await paginate(comments_collection, {"replyTo": comment_id}, transformer=transformer_wrapper)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @comment_router.post("", status_code=status.HTTP_201_CREATED, response_model=CommentResponse)
 async def create(post_id: str,
@@ -85,4 +146,3 @@ async def update(comment_id: str, comment: CommentUpdate):
         return {"message": "Comment updated successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-

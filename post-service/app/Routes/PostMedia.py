@@ -16,7 +16,7 @@ postMedia_router = APIRouter(prefix="/post_media", tags=["PostMedia"])
 @postMedia_router.get("/{post_id}", status_code=status.HTTP_200_OK)
 async def get(post_id: str):
     try:
-        media = await postMedia_collection.find({"postId": post_id})
+        media = await postMedia_collection.find({"postId": post_id}).to_list()
         return [PostMediaResponse(**m, id=str(m["_id"])) for m in media]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
