@@ -1,0 +1,218 @@
+services:
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    image: api-gateway:latest
+    container_name: "api-gateway"
+    depends_on:
+      - chat-service-container
+      - user-service-container
+      - relationship-service-container
+      - post-service-container
+      - comment-service-container
+    ports:
+      - "8080:8080"
+    environment:
+      CHAT_SERVICE_URL: http://chat-service-container:8101
+      USER_SERVICE_URL: http://user-service-container:8103
+      RELATIONSHIP_SERVICE_URL: http://relationship-service-container:8105
+      POST_SERVICE_URL: http://post-service-container:8102
+      COMMENT_SERVICE_URL: http://comment-service-container:8104
+    networks:
+      - shared-network
+
+  minio-storage:
+    image: quay.io/minio/minio:latest
+    container_name: "minio-storage"
+    ports:
+      - "9007:9000"
+      - "9008:9008"
+    env_file:
+      - ./.env.global
+    command: server /data --console-address ":9008"
+    volumes:
+      - ./minio-data:/data
+    networks:
+      - shared-network
+
+  chat-service-container:
+    build:
+      context: ./chat-service
+      dockerfile: Dockerfile.prod
+    image: chat-service:prod
+    container_name: chat-service-container
+    ports:
+      - "8101:8101"
+    depends_on:
+      - kafka
+      - minio-storage
+    env_file:
+      - ./.env.global
+      - ./chat-service/.env
+    environment:
+      - MINIO_BUCKET_PATH=chat-service
+    networks:
+      - shared-network
+
+  user-service-container:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    image: user-service:latest
+    container_name: "user-service-container"
+    ports:
+      - "8103:8103"
+    depends_on:
+      - minio-storage
+      - kafka
+    networks:
+      - user-network
+      - shared-network
+    env_file:
+      - ./.env.global
+      - ./user-service/.env
+    environment:
+      MINIO_BUCKET_PATH: user-service
+
+  relationship-service-container:
+    build:
+      context: ./relationship-service
+      dockerfile: Dockerfile
+    image: relationship-service:latest
+    container_name: "relationship-service-container"
+    ports:
+      - "8105:8105"
+    depends_on:
+      - kafka
+    networks:
+      - user-network
+      - shared-network
+    env_file:
+      - ./.env.global
+      - ./relationship-service/.env
+    environment:
+      USER_SERVICE_URL: http://user-service-container:8103
+
+  post-service-container:
+    build:
+      context: ./post-service
+      dockerfile: Dockerfile
+    image: post-service:latest
+    container_name: "post-service-container"
+    volumes:
+      - ./post-service:/app
+    ports:
+      - "8102:8102"
+    depends_on:
+      - minio-storage
+      - kafka
+    networks:
+      - post-network
+      - shared-network
+    env_file:
+      - ./.env.global
+      - ./post-service/.env
+    environment:
+      MINIO_BUCKET_PATH: post-service
+    develop:
+      watch:
+        - action: sync
+          path: ./post-service
+          target: /app
+        - action: rebuild
+          path: ./post-service/requirements.txt
+
+  comment-service-container:
+    build:
+      context: ./comment-service
+      dockerfile: Dockerfile
+    image: comment-service:latest
+    container_name: "comment-service-container"
+    volumes:
+      - ./comment-service:/app
+    ports:
+      - "8104:8104"
+    depends_on:
+      - minio-storage
+      - kafka
+    networks:
+      - comment-network
+      - shared-network
+    env_file:
+      - ./.env.global
+      - ./comment-service/.env
+    environment:
+      MINIO_BUCKET_PATH: comment-service
+    develop:
+      watch:
+        - action: sync
+          path: ./comment-service
+          target: /app
+        - action: rebuild
+          path: ./comment-service/requirements.txt
+
+  kafka:
+    image: "bitnami/kafka:latest"
+    container_name: kafka
+    ports:
+      - "9094:9094"
+    env_file:
+      - ./.env.global
+    networks:
+      - shared-network
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop
+    container_name: kafdrop
+    ports:
+      - "9010:9000"
+    environment:
+      KAFKA_BROKERCONNECT: "kafka:9092"
+    depends_on:
+      - kafka
+    networks:
+      - shared-network
+
+  notification-service-db:
+    image: mongo:latest
+    container_name: "notification-service-mongodb"
+    ports:
+      - "9006:9006"
+    volumes:
+      - ./notification-service/mongo-data:/data/db
+    networks:
+      - shared-network
+
+  notification-service-container:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile.prod
+    image: notification-service:prod
+    container_name: notification-service-container
+    ports:
+      - "8106:8106"
+    depends_on:
+      - kafka
+      - notification-service-db
+    env_file:
+      - ./.env.global
+      - ./notification-service/.env
+    networks:
+      - shared-network
+
+networks:
+  user-network:
+    driver: bridge
+  shared-network:
+    driver: bridge
+  post-network:
+    driver: bridge
+  comment-network:
+    driver: bridge
+
+volumes:
+  post_service_data:
+    external: true
+  comment_service_data:
+    external: true
