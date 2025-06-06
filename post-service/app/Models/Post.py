@@ -1,7 +1,14 @@
 from datetime import datetime
+
+from fastapi import Request
 from pydantic import BaseModel
 from typing import Optional
 from enum import Enum
+from httpx import AsyncClient, RequestError
+
+from app.Config.config import API_GATEWAY_URL
+from app.Services.auth_service import verify_token
+
 
 class PostVisibility(Enum):
     PRIVATE = 0
@@ -22,10 +29,7 @@ class PostRequest(Post):
 
 class PostResponse(Post):
     id: str
+    creator: Optional[dict] = None
+    liked: Optional[bool] = None
+    likeCount: Optional[int] = 0
 
-    @staticmethod
-    def from_mongo(documents):
-        for document in documents:
-            document["id"] = str(document["_id"])
-            document.pop("_id")
-        return [PostResponse(**document) for document in documents]

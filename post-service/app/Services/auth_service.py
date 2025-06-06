@@ -3,13 +3,15 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from httpx import AsyncClient, RequestError
 from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_500_INTERNAL_SERVER_ERROR
 
+from app.Config.config import API_GATEWAY_URL
+
 # HTTP Bearer Token Security Scheme
 security = HTTPBearer()
 
 async def verify_token(credentials: HTTPAuthorizationCredentials = Security(security)):
 
     token = credentials.credentials  # Extract token from Authorization header
-    auth_service_url = "http://api-gateway:8080/auth/me"  # URL of auth service
+    auth_service_url = f"{API_GATEWAY_URL}/auth/me"  # URL of auth service
 
     async with AsyncClient() as client:
         try:
@@ -23,7 +25,10 @@ async def verify_token(credentials: HTTPAuthorizationCredentials = Security(secu
             if response.status_code == 200:
                 user_data = response.json().get("data")
                 if user_data:
-                    return user_data  # Return user data if token is valid
+                    return {
+                        "current_user": user_data,
+                        "token": token
+                    }  # Return user data if token is valid
 
             # If response status is not 200 or data is missing, raise exception
             raise HTTPException(

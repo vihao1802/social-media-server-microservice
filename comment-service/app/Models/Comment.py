@@ -17,13 +17,11 @@ class CommentRequest(Comment):
 
 class CommentResponse(Comment):
     id: str
+    user: Optional[dict] = None
+    liked: Optional[bool] = False
+    likeCount: Optional[int] = 0
+    childCount: Optional[int] = 0
 
-    @staticmethod
-    def from_mongo(documents):
-        for document in documents:
-            document["id"] = str(document["_id"])
-            document.pop("_id")
-        return [CommentResponse(**document) for document in documents]
 
 class CommentUpdate(BaseModel):
     content: Optional[str]

@@ -12,10 +12,10 @@ postViewer_router = APIRouter(prefix="/post_viewer", tags=["PostViewers"])
 )
 async def get(post_id: str):
     try:
-        post_viewer = postViewer_collection.find(
+        post_viewer = await postViewer_collection.find(
             {"postId": post_id}
-        )  # post_viewer is a cursor so we need to convert it to a list
-        return [PostViewerResponse(id=str(pv["_id"]), **pv) for pv in list(post_viewer)]
+        ).to_list()  # post_viewer is a cursor so we need to convert it to a list
+        return [PostViewerResponse(id=str(pv["_id"]), **pv) for pv in post_viewer]
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"An unexpected error occurred: {str(e)}"
