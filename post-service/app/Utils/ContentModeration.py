@@ -1,6 +1,8 @@
 from fastapi import HTTPException
 import json
 
+from openai import moderations
+
 from app.Config.google_genai import client, moderation_prompt, model_name
 from google.genai import types
 from app.Models.Moderation import Moderation
@@ -9,20 +11,17 @@ from starlette.datastructures import UploadFile
 
 async def content_moderation(moderation: Moderation):
     try:
-        if not moderation.content:
-            raise HTTPException(status_code=400, detail="Content cannot be empty")
-
         contents = (
-            moderation.content if isinstance(moderation.content, str)
+            moderation.content if moderation.content is not None
             else types.Part.from_bytes(
-                data=await moderation.content.read(),
-                mime_type=moderation.content.content_type
-            ) if isinstance(moderation.content, UploadFile)
+                data=moderation.file_data,
+                mime_type=moderation.file_content_type
+            ) if moderation.file_data is not None and moderation.file_content_type is not None
             else None
         )
 
         if contents is None:
-            raise HTTPException(status_code=400, detail="Invalid content type provided")
+            raise HTTPException(status_code=400, detail="Invalid content or file type provided")
 
         response = client.models.generate_content(
             model=model_name,

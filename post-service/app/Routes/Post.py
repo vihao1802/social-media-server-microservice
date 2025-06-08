@@ -1,19 +1,25 @@
+import io
 import this
+from typing import List, Optional
 
-from fastapi import APIRouter, status, HTTPException, Security, Request
+from fastapi import APIRouter, status, HTTPException, Security, Request, Form, UploadFile, File
 from fastapi.security import HTTPAuthorizationCredentials
 from httpx import AsyncClient, RequestError
+from pymongo.client_session import ClientSession
+from datetime import datetime, timezone
 
 from app.Config.config import API_GATEWAY_URL
+from app.Config.minio_client import service_preflex, minio_client, bucket_name
 from app.Models.Kafka import PostMessage
 from app.Models.Moderation import Moderation
-from app.Models.Post import PostRequest
+from app.Models.Post import PostRequest, PostVisibility
 from app.Models.Post import PostResponse
-from app.Database.database import post_collection, postViewer_collection
+from app.Database.database import post_collection, postViewer_collection, db, postMedia_collection
 from fastapi_pagination import Page
 from fastapi_pagination.ext.motor import paginate
 from bson import ObjectId
 
+from app.Models.PostMedia import MediaType, PostMediaResponse
 from app.Services.auth_service import security
 from app.Utils.ContentModeration import content_moderation
 from app.Config.kafka_producer import kafka_producer
@@ -34,11 +40,10 @@ async def handle_post_response(documents, token: str, current_user_id: str):
             document["liked"] = await postViewer_collection.find_one({
                 "postId": document["id"],
                 "userId": current_user_id,
-                "liked": True
             }) is not None
 
             document["likeCount"] = await postViewer_collection.count_documents(
-                {"postId": document["id"], "liked": True}
+                {"postId": document["id"]}
             )
 
             creator_info = None
@@ -73,7 +78,7 @@ async def get(request: Request):
         async def transformer_wrapper(items):
             return await handle_post_response(items, token=request.state.token, current_user_id=request.state.user.get("id"))
 
-        return await paginate(post_collection, transformer=transformer_wrapper)
+        return await paginate(post_collection, {"isDeleted": False}, sort=("createdAt",-1), transformer=transformer_wrapper)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -144,26 +149,83 @@ async def get(credentials: HTTPAuthorizationCredentials = Security(security)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@post_router.post("", status_code=status.HTTP_201_CREATED, response_model=PostResponse)
-async def create(post: PostRequest):
-    try:
-        request_data = post.dict()
-        request_data["visibility"] = request_data["visibility"].value
+@post_router.post("", status_code=status.HTTP_201_CREATED, response_model=dict)
+async def create(
+        content: str = Form(...),
+        visibility: PostVisibility = Form(...),
+        is_story: bool = Form(False),
+        creator_id: str = Form(...),
+        is_deleted: bool = Form(False),
+        media_types: List[MediaType] = Form(...),               # Danh sách loại media tương ứng
+        media_files: List[UploadFile] = File(...),              # Danh sách file upload
+):
+    session: ClientSession = await db.client.start_session()
+    async with session.start_transaction():
+        try:
+            # handle post creation
+            if not await content_moderation(Moderation(content=content)):
+                request_data = {
+                    "content": content,
+                    "visibility": visibility.value,
+                    "isStory": is_story,
+                    "isDeleted": is_deleted,
+                    "creatorId": creator_id,
+                    "createdAt": datetime.now(timezone.utc)
+                }
+                post_result = await post_collection.insert_one(request_data, session=session)
+                post_id = str(post_result.inserted_id)
 
-        if not await content_moderation(Moderation(content=request_data["content"])):
-            result = await post_collection.insert_one(request_data)
-            post_message = PostMessage(postId=str(result.inserted_id), creatorId=request_data["creatorId"])
-            await kafka_producer.send(
-                topic="create-post",
-                message=post_message.dict(),
-                headers=[("__TypeId__", b"post-message")]
-            )
-            return PostResponse(id=str(result.inserted_id), **request_data)
-    except HTTPException as http_e:
-        raise http_e
+                # handle media creation
+                if len(media_files) != len(media_types):
+                    raise HTTPException(status_code=400, detail=f"Media file and type count mismatch: [{len(media_files)} != {len(media_types)}]")
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+                media_response_list = []
+
+                noti_flag = False
+
+                for file, mtype in zip(media_files, media_types):
+                    data = await file.read()
+                    if not await content_moderation(Moderation(file_data=data, file_content_type=file.content_type)):
+                        # Save media file to Minio
+                        noti_flag = True
+                        media_url = f"{service_preflex}/{file.filename}"
+                        file_len = len(data)
+                        minio_client.put_object(bucket_name, media_url, io.BytesIO(data), file_len,file.content_type, part_size=10*1024*1024)
+
+                        new_post_media = {
+                            "mediaType": mtype.value,
+                            "postId": post_id,
+                            "mediaUrl": media_url
+                        }
+
+                        media_result = await postMedia_collection.insert_one(new_post_media, session=session)
+                        media_response_list.append(PostMediaResponse(**new_post_media, id=str(media_result.inserted_id)))
+                # handle kafka notification
+                if noti_flag:
+                    # Create a PostMessage object and send it to Kafka
+                    post_message = PostMessage(postId=post_id, creatorId=request_data["creatorId"])
+                    await kafka_producer.send(
+                        topic="create-post",
+                        message=post_message.dict(),
+                        headers=[("__TypeId__", b"post-message")]
+                    )
+
+                    await session.commit_transaction()
+
+                    return {
+                        "post": PostResponse(id=post_id, **request_data),
+                        "media": media_response_list
+                    }
+
+        except HTTPException as http_e:
+            await session.abort_transaction()
+            raise http_e
+
+        except Exception as e:
+            await session.abort_transaction()
+            raise HTTPException(status_code=500, detail=str(e))
+        finally:
+            await session.end_session()
 
 @post_router.put("/{post_id}", status_code=status.HTTP_200_OK, response_model=PostResponse)
 async def update(post_id: str, request_data: PostRequest):
@@ -188,7 +250,7 @@ async def delete(post_id: str):
         if post is None:
             raise HTTPException(status_code=404, detail="Post not found")
 
-        post_collection.update_one({"_id": ObjectId(post_id)}, {"$set": {"isDelete": True}})
+        post_collection.update_one({"_id": ObjectId(post_id)}, {"$set": {"isDeleted": True}})
 
         return {"message": "Post deleted successfully"}
     except Exception as e:
