@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, Annotated
 from bson import ObjectId
-from fastapi import APIRouter, status, UploadFile, File, HTTPException, Request
+from fastapi import APIRouter, status, UploadFile, File, HTTPException, Request, Form
 from fastapi_pagination import Page
 from fastapi_pagination.ext.motor import paginate
 from httpx import AsyncClient, RequestError
@@ -80,12 +80,12 @@ async def get_reply_comments(comment_id: str, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 @comment_router.post("", status_code=status.HTTP_201_CREATED, response_model=CommentResponse)
-async def create(post_id: str,
-                 user_id: str,
-                 content: Optional[str] = None,
-                 created_at: datetime = datetime.now(),
-                 reply_to: Optional[str] = None,
-                 media_file: Annotated[UploadFile | None, File()] = None):
+async def create(post_id: str = Form(...),
+                 user_id: str = Form(...),
+                 created_at: datetime = Form(datetime.now()),
+                 content: str = Form(None),
+                 reply_to: str = Form(None),
+                 media_file: UploadFile = Form(None)):
     try:
         request_data = {
             "postId": post_id,
