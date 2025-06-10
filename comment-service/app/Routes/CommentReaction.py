@@ -15,17 +15,27 @@ async def create(request_data: CommentReactionRequest):
         if not comment:
             raise HTTPException(status_code=404, detail="Comment not found")
 
+        existing_reaction = await comment_reaction_collection.find_one({
+            "commentId": data["commentId"],
+            "userId": data["userId"]
+        })
+        if existing_reaction:
+            raise HTTPException(status_code=400, detail="Reaction already exists")
+
         new_reaction = await comment_reaction_collection.insert_one(data)
         return CommentReactionResponse(id=str(new_reaction.inserted_id), **request_data.dict())
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
 
-@comment_reaction_router.delete("/{reaction_id}", status_code=status.HTTP_200_OK)
-async def delete(reaction_id: str):
+@comment_reaction_router.delete("/comment/{comment_id}/user/{user_id}", status_code=status.HTTP_200_OK)
+async def delete(comment_id: str, user_id: str):
     try:
-        data = await comment_reaction_collection.find_one({"_id": ObjectId(reaction_id)})
+        data = await comment_reaction_collection.find_one({"commentId": comment_id, "userId": user_id})
         if not data:
             raise HTTPException(status_code=404, detail="Reaction not found")
-        await comment_reaction_collection.delete_one({"_id": ObjectId(reaction_id)})
+
+        await comment_reaction_collection.delete_one({"commentId": comment_id, "userId": user_id})
+
+        return {"detail": "Reaction deleted successfully", "commentId": comment_id, "userId": user_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")

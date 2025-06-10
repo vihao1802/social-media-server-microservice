@@ -49,7 +49,6 @@ async def handle_comment_response(documents, token: str, current_user_id: str):
             document["childCount"] = await comments_collection.count_documents(
                 {"replyTo": document["id"]}
             )
-            print(current_user_id, document["id"])
             document["liked"] = await comment_reaction_collection.find_one({"userId": current_user_id, "commentId": document["id"]}) is not None
             document["likeCount"] = await comment_reaction_collection.count_documents(
                 {"commentId": document["id"]}
